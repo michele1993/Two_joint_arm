@@ -104,7 +104,7 @@ class Arm_model:
             t0 = it
             i+=1
 
-        return self.eval_points, y
+        return self.eval_points, np.array(y)
 
 
 
