@@ -4,8 +4,10 @@ from Arm_model import Arm_model
 from scipy.io import savemat
 from safety_checks.Video_arm_config import Video_arm
 
-# This script creates a matlab file with the result of the python simulation with a simple constant input
-# to be compared to the matlab version
+# This script creates a matlab file with the result of the python simulation, using "discrete" ivp_solve, with
+# a simple constant input, to be compared to the matlab version, after comparison (with a matlab script), obtained
+# the same result up to numerical error
+
 
 npoints = 40
 arm1 = Arm_model(n_points = npoints)
