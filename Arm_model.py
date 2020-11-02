@@ -46,6 +46,7 @@ class Arm_model:
         np.random.seed(1)
         self.F = np.random.randn(2,2) # viscosity matrix
 
+
         #self.F = np.array([[0.4170, 0.0001],[0.7203, 0.3023]]) # VALUES USED BY MATLAB
 
 
@@ -72,13 +73,12 @@ class Arm_model:
 
     def dynamical_system(self,t,y,u1,u2): # create equivalent 1st order dynamical system of equations to be passed to solve_ivp
 
-        # print(u1)
-        # print(u2)
-        #
-        # print(u1[self.cnt])
-        # print(u2[self.cnt])
-        #print(t)
-        # exit()
+        #print(u1)
+        #print(u2)
+        print(u1[self.cnt])
+        print(u2[self.cnt])
+        # print(t)
+        # print('\n')
 
         inv_MM = self.inverse_M(y[1])
 
@@ -101,7 +101,6 @@ class Arm_model:
         solutions = solve_ivp(self.dynamical_system, self.tspan, self.x0, t_eval=self.eval_points, args=(u[:,0], u[:,1]))
 
         #print(solutions.t.T)
-        #exit()
         return solutions.t.T, solutions.y.T
 
 
