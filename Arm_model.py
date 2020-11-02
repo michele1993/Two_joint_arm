@@ -72,13 +72,6 @@ class Arm_model:
 
     def dynamical_system(self,t,y,u1,u2): # create equivalent 1st order dynamical system of equations to be passed to solve_ivp
 
-        # print(u1)
-        # print(u2)
-        #
-        # print(u1[self.cnt])
-        # print(u2[self.cnt])
-        #print(t)
-        # exit()
 
         inv_MM = self.inverse_M(y[1])
 
@@ -87,21 +80,21 @@ class Arm_model:
 
         d_eq = np.dot(inv_MM, ([y[4],y[5]] - np.dot(CC, [y[2],y[3]]) + np.dot(self.F,[y[2],y[3]])))
 
-        dydt = np.array([y[2], y[3], d_eq[0], d_eq[1], y[6], y[7], u1[self.cnt], u2[self.cnt]])
+        dydt = np.array([y[2], y[3], d_eq[0], d_eq[1], y[6], y[7], u1, u2])
 
-        self.cnt +=1
+
 
         return dydt
 
 
     def perfom_reaching(self, u):
 
-        self.cnt = 0
+
         # I think you may have to break it one at the time, branch current project and try I guess
         solutions = solve_ivp(self.dynamical_system, self.tspan, self.x0, t_eval=self.eval_points, args=(u[:,0], u[:,1]))
 
-        #print(solutions.t.T)
-        #exit()
+        print(solutions.t.T)
+        exit()
         return solutions.t.T, solutions.y.T
 
 
