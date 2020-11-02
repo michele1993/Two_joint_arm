@@ -13,7 +13,7 @@ class Arm_model:
         # Simulation parameters
         self.tspan = tspan
         self.x0 = x0
-        self.eval_points = np.linspace(0, tspan[1], 40)
+        self.eval_points = np.linspace(0, tspan[1], n_points)
 
 
 
@@ -83,19 +83,28 @@ class Arm_model:
         dydt = np.array([y[2], y[3], d_eq[0], d_eq[1], y[6], y[7], u1, u2])
 
 
-
         return dydt
 
 
     def perfom_reaching(self, u):
 
+        x0 = self.x0
+        t0 = self.tspan[0]
+        i = 0
+        y = []
+        y.append(x0)
 
-        # I think you may have to break it one at the time, branch current project and try I guess
-        solutions = solve_ivp(self.dynamical_system, self.tspan, self.x0, t_eval=self.eval_points, args=(u[:,0], u[:,1]))
+        # run integration one u-input at the time to avoid convergence problem
+        for it in self.eval_points[1:]: # select all as upper bound of time interval, but first value which is represented by t0
 
-        print(solutions.t.T)
-        exit()
-        return solutions.t.T, solutions.y.T
+            solutions = solve_ivp(self.dynamical_system, [t0, it], x0, args=(u[i,0], u[i,1]))
+
+            x0 = solutions.y.T[-1,:] # transponse solution for desired format
+            y.append(x0) #store last value of integration for that interval, corresponding to the desired time value
+            t0 = it
+            i+=1
+
+        return self.eval_points, y
 
 
 

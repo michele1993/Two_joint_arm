@@ -7,7 +7,8 @@ from safety_checks.Video_arm_config import Video_arm
 # This script creates a matlab file with the result of the python simulation with a simple constant input
 # to be compared to the matlab version
 
-arm1 = Arm_model()
+npoints = 40
+arm1 = Arm_model(n_points = npoints)
 
 u = [45, 5]
 
