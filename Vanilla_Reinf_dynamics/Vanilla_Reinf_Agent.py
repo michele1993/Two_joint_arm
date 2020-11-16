@@ -8,17 +8,23 @@ from torch.distributions import Normal
 class Reinf_Agent(nn.Module): # inherit for easier managing of trainable parameters
 
 
-    def __init__(self,n, std = 0.5, ln_rate= 0.001, discount = 0.999):
+    def __init__(self,n, std = 0.5, ln_rate= 0.1, discount = 0.95):
 
         super().__init__()
 
         self.discount = discount
         self.std = std
-        self.mu_s = nn.Parameter(torch.randn(n,2)) # initalise means randomly
+        self.mu_s = nn.Parameter(torch.randn(n-1,2) *10) #*10  #  initalise means randomly, one less, than data points - since itegrate in pairs of values
         self.optimiser = opt.Adam(self.parameters(),ln_rate)
+        #self.optimiser = opt.SGD(self.parameters(),ln_rate)
+        #print(list(self.parameters())[0] is self.mu_s)
+
+
+
 
 
     def sample_a(self): # sample all control signals in one go and store their log p
+
 
         d = Normal(self.mu_s, self.std)
 
@@ -26,15 +32,22 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
 
         self.log_ps = d.log_prob(sampled_as)
 
+
         return sampled_as
 
 
     def update(self, dis_rwd):
 
-        loss = (-self.log_ps * dis_rwd).mean() # check that product is element-wise, may need log_ps.view(-1)
+
+        loss = torch.sum(self.log_ps * dis_rwd)# dis_rwd.reshape(-1,1) #.mean() # check that product is element-wise, may need log_ps.view(-1)
+
         self.optimiser.zero_grad()
         loss.backward()
+        # print(list(self.parameters())[0].grad)
+
         self.optimiser.step()
+
+        self.log_ps = None # flush self.log just in case
 
         return loss
 
@@ -63,3 +76,27 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
 
 
     # MAY WANT TO INCLUDE BASELINE!
+
+
+
+
+    # CHECK BACKWARD GRAPH TO SEE WHERE GRADIENT FLOW FROM LOSS ------------------------------
+    # print(loss)
+    # print(loss.grad_fn.next_functions[0][0])
+    # print(loss.grad_fn.next_functions[0][0].next_functions)
+    # print(loss.grad_fn.next_functions[0][0].next_functions[0][0].next_functions)
+    # print(loss.grad_fn.next_functions[0][0].next_functions[0][0].next_functions[0][0].next_functions)
+    # print(
+    #     loss.grad_fn.next_functions[0][0].next_functions[0][0].next_functions[0][0].next_functions[0][0].next_functions)
+    # print(
+    #     loss.grad_fn.next_functions[0][0].next_functions[0][0].next_functions[0][0].next_functions[0][0].next_functions[
+    #         0][0].next_functions)
+    # print(
+    #     loss.grad_fn.next_functions[0][0].next_functions[0][0].next_functions[0][0].next_functions[0][0].next_functions[
+    #         0][0].next_functions[0][0].next_functions)
+    # print(
+    #     loss.grad_fn.next_functions[0][0].next_functions[0][0].next_functions[0][0].next_functions[0][0].next_functions[
+    #         0][0].next_functions[0][0].next_functions[0][0].next_functions)
+    # print(
+    #     loss.grad_fn.next_functions[0][0].next_functions[0][0].next_functions[0][0].next_functions[0][0].next_functions[
+    #         0][0].next_functions[0][0].next_functions[0][0].next_functions[1][0].variable is self.mu_s)
