@@ -40,11 +40,13 @@ class Parall_Arm_model:
 
         self.alpha = m1 * lc1**2 + I1 + m2 * lc2**2 + I2 + m2* self.l1**2
         self.omega = 2 * m2 * self.l1 * lc2
+
         self.M22 = m2 * lc2**2 + I2
+
         self.beta = m2 * lc2**2 + I2
         self.delta = m2 * self.l1 * lc2
 
-        np.random.seed(1)
+        np.random.seed(1) # use numpy seed for comparison with non-paralell version
         self.F = torch.repeat_interleave(torch.Tensor(np.random.rand(2,2)),n_arms).reshape(2,2,n_arms) # viscosity matrix
 
 
