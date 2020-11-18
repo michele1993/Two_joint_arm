@@ -2,18 +2,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from scipy.integrate import solve_ivp
+import torch
 
 
 
 
-class Arm_model:
+class Parall_Arm_model:
 
-    def __init__(self, height=1.8, mass=80, tspan = [0, 0.4],x0 = [-np.pi/2, np.pi/2, 0, 0, 0, 0, 0, 0],n_points = 40):
+    def __init__(self, n_arms=10, height=1.8, mass=80, tspan = [0, 0.4],x0 = [-np.pi/2, np.pi/2, 0, 0, 0, 0, 0, 0],n_points = 40):
 
         # Simulation parameters
         self.tspan = tspan
-        self.x0 = x0
+        self.x0 = torch.Tensor(x0).repeat(n_arms).reshape(n_arms,-1)
         self.eval_points = np.linspace(tspan[0], tspan[1], n_points)
+        self.n_arms = n_arms
 
 
         # Mass and height of ppt
@@ -43,50 +45,69 @@ class Arm_model:
         self.delta = m2 * self.l1 * lc2
 
         np.random.seed(1)
-        self.F = np.random.rand(2,2) # viscosity matrix
-
-        #self.F = np.array([[0.4170, 0.0001],[0.7203, 0.3023]]) # VALUES USED BY MATLAB
+        self.F = torch.repeat_interleave(torch.Tensor(np.random.rand(2,2)),n_arms).reshape(2,2,n_arms) # viscosity matrix
 
 
     def inverse_M(self, theta2): # this methods allows to compute the inverse of matrix (function) M(theta2)
 
-        M11 = self.alpha + self.omega * np.cos(theta2)
+        M11 = torch.squeeze(self.alpha + self.omega * torch.cos(theta2))
 
 
-        M12 = 0.5 * self.omega * np.cos(theta2) + self.beta
+        M12 = torch.squeeze(0.5 * self.omega * torch.cos(theta2) + self.beta)
 
 
-        denom = M11 * self.M22 - M12**2
+        denom = torch.squeeze(M11 * self.M22 - M12**2)
+
+        #M22 = torch.Tensor([self.M22]).repeat(len(M11)) for 1d tensor, always use expand instead of repeat
+        M22 = torch.Tensor([self.M22]).expand(self.n_arms)
 
 
-        return (1. / denom) * np.array([[self.M22, - M12],[-M12, M11]])
+        return (1 / denom) * torch.cat([M22, -M12, -M12, M11]).reshape(2,2,-1) # make 2x2xn Tensor with each corresponding entry
 
 
     def computeC(self, theta2, d_theta1, d_theta2): # precompute the matrix (function) C(theta2, dtheta1, dtheta2)
 
-        c = self.delta * np.sin(theta2)
+        c = self.delta * torch.sin(theta2)
 
-        C11 = -2 * d_theta2 * c
-        C12 = - d_theta2 * c
-        C21 = d_theta1 * c
+        C11 = -2 * torch.mul(d_theta2, c)
+        C12 = torch.mul(- d_theta2, c)
+        C21 = torch.mul(d_theta1, c)
 
-        return np.array([[C11, C12], [C21, 0]])
+
+        return torch.cat([C11, C12, C21, torch.Tensor([0]).expand(self.n_arms)]).reshape(2, 2, -1)
+
 
 
     def dynamical_system(self,t,y,u1,u2): # create equivalent 1st order dynamical system of equations to be passed to solve_ivp
 
 
-        inv_MM = self.inverse_M(y[1])
+        inv_MM = self.inverse_M(y[:,1])
 
+        CC = self.computeC(y[:,1],y[:,2],y[:,3])
 
-        CC = self.computeC(y[1],y[2],y[3])
+        d_thet = torch.stack([y[:,2],y[:,3]]) # cat: concatenate along given dim, stack: concatenate along new dim
 
-        d_eq = np.dot(inv_MM, ([y[4],y[5]] - np.dot(CC, [y[2],y[3]]) + np.dot(self.F,[y[2],y[3]])))
+        torques = torch.stack([y[:,4],y[:,5]])
 
-        dydt = np.array([y[2], y[3], d_eq[0], d_eq[1], y[6], y[7], u1, u2])
+        eq_rhs = torques - torch.einsum("ijk,jk -> ik",CC, d_thet) + torch.einsum("ijk,jk -> ik",self.F,d_thet)
 
+        d_eq = torch.einsum("ijk,jk -> ik", inv_MM, eq_rhs)
+
+        dydt = torch.stack([y[:,2], y[:,3], d_eq[0,:], d_eq[1,:], y[:,6], y[:,7], u1, u2]).T # NEED TO REDEFINE IT
 
         return dydt
+
+        # print(y[:,2].size())
+        # print(y[:, 3].size())
+        # print(d_eq[0,:].T.size())
+        # print(d_eq[1,:].T.size())
+        # print(y[:, 6].size())
+        # print(y[:, 7].size())
+        # print(u1.size())
+        # print(u2.size())
+        # print(d_eq)
+        # exit()
+
 
 
     def fixed_RK_4(self, t_step,u):
@@ -103,8 +124,6 @@ class Arm_model:
 
         c_y = self.x0
 
-        y.append(c_y)
-
         c_t = 0
 
         t = []
@@ -114,32 +133,33 @@ class Arm_model:
 
         for _ in range(n_iterations):
 
+            y.append(c_y.detach().clone()) # store intermediate values, but without keeping track of gradient for each
+
             # Compute 4 different slopes to perfom the update
 
-            k1 = self.dynamical_system(t_,c_y,u[0],u[1])
+            k1 = self.dynamical_system(t_,c_y,u[:,0],u[:,1])
 
             n_y = c_y + (k1 * t_step/2)
 
-            k2 = self.dynamical_system(t_, n_y,u[0],u[1])
+            k2 = self.dynamical_system(t_, n_y,u[:,0],u[:,1])
 
             n_y = c_y + (k2 * t_step / 2)
 
-            k3 = self.dynamical_system(t_, n_y, u[0], u[1])
+            k3 = self.dynamical_system(t_, n_y, u[:,0], u[:,1])
 
             n_y = c_y + (k3 * t_step)
 
-            k4 = self.dynamical_system(t_, n_y, u[0], u[1])
+            k4 = self.dynamical_system(t_, n_y, u[:,0], u[:,1])
 
             c_y += t_step * (1/6) * (k1 + 2*k2 + 2*k3 + k4)
 
-            y.append(c_y.copy()) # otherwise just add memory location and c_y keeps changing so end up with all final values of c_y!!!
-
             c_t += t_step
+
             t.append(c_t)
 
-        return t, y
+        y.append(c_y) # store final locations, which contains backward gradient, through all previous points
 
-
+        return t, torch.stack(y)
 
 
     def perfom_reaching(self, u):
@@ -149,34 +169,28 @@ class Arm_model:
         i = 0
         y = []
         y.append(x0)
-        #t_trial = []
-        #t_trial.append(t0)
 
 
-        # run integration one u-input at the time to avoid convergence problem
-        for it in self.eval_points[1:]: # select all as upper bound of time interval, but first value which is represented by t0
 
-            #solutions = solve_ivp(self.dynamical_system, [t0, it], x0, args=(u[i,0], u[i,1]))
-            solutions = solve_ivp(self.dynamical_system, [t0, it], x0, args=(u[0,0], u[0,1]))
+        for it in self.eval_points[1:]:
+
+            solutions = solve_ivp(self.dynamical_system, [t0, it], x0, args=(u[i,0], u[i,1]))
+
+
             x0 = solutions.y.T[-1,:] # transponse solution for desired format
-            y.append(x0) #store last value of integration for that interval, corresponding to the desired time value
+            y.append(x0)
             t0 = it
             i+=1
-            #t_trial.append(solutions.t.T[-1])
 
-
-
-
-
-        return self.eval_points, np.array(y) #, t_trial
+        return self.eval_points, np.array(y)
 
 
     def compute_rwd(self,y, x_hat,y_hat): # based on average distance of last five points from target
 
-        [x_c, y_c] = self.convert_coord(y[-1, 0], y[-1, 1])#self.convert_coord(y[-5:, 0], y[-5:, 1])
+        [x_c, y_c] = self.convert_coord(y[-1:, 0], y[-1:, 1])#self.convert_coord(y[-5:, 0], y[-5:, 1])
 
 
-        return  np.mean(np.sqrt((y_hat - y_c)**2 + (x_hat - x_c)**2))
+        return - np.mean(np.sqrt((y_hat - y_c)**2 + (x_hat - x_c)**2))
 
 
 
@@ -271,9 +285,3 @@ class Arm_model:
             ax1.plot(x[i], y[i], 'o', color=c)
 
         plt.show()
-
-
-
-
-
-
