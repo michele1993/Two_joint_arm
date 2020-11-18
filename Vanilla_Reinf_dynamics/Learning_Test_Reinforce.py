@@ -33,6 +33,7 @@ alpha = 0.01
 for ep in range(episodes):
 
     actions = agent.sample_a() # may need converting to numpy since it's a tensor
+
     t, thetas = arm.perfom_reaching(actions)
 
     y_ = thetas[1:,[0,1]]
