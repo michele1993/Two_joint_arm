@@ -13,12 +13,10 @@ class Parall_Arm_model:
 
         # Simulation parameters
         self.tspan = tspan
-        self.x0 = torch.Tensor(x0).repeat(n_arms).reshape(n_arms, -1)
+        self.x0 = torch.Tensor(x0).repeat(n_arms).reshape(n_arms,-1)
         self.eval_points = np.linspace(tspan[0], tspan[1], n_points)
         self.n_arms = n_arms
 
-
-        #PRECOPUTE AS MANY PARAMETERS AS POSSIBLE FOR SPEED:
 
         # Mass and height of ppt
         self.M = mass
