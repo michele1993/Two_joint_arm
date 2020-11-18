@@ -51,9 +51,13 @@ class Arm_model:
     def inverse_M(self, theta2): # this methods allows to compute the inverse of matrix (function) M(theta2)
 
         M11 = self.alpha + self.omega * np.cos(theta2)
+
+
         M12 = 0.5 * self.omega * np.cos(theta2) + self.beta
 
+
         denom = M11 * self.M22 - M12**2
+
 
         return (1. / denom) * np.array([[self.M22, - M12],[-M12, M11]])
 

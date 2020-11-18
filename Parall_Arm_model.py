@@ -13,9 +13,12 @@ class Parall_Arm_model:
 
         # Simulation parameters
         self.tspan = tspan
-        self.x0 = x0.repeat(n_arms).reshape(n_arms,-1)
+        self.x0 = torch.Tensor(x0).repeat(n_arms).reshape(n_arms, -1)
         self.eval_points = np.linspace(tspan[0], tspan[1], n_points)
+        self.n_arms = n_arms
 
+
+        #PRECOPUTE AS MANY PARAMETERS AS POSSIBLE FOR SPEED:
 
         # Mass and height of ppt
         self.M = mass
@@ -44,23 +47,21 @@ class Parall_Arm_model:
         self.delta = m2 * self.l1 * lc2
 
         np.random.seed(1)
-        self.F = torch.repeat_interleave(torch.rand(2,2),n_arms).reshape(2,2,n_arms) # viscosity matrix
-
-        #self.F = np.array([[0.4170, 0.0001],[0.7203, 0.3023]]) # VALUES USED BY MATLAB
+        self.F = torch.repeat_interleave(torch.Tensor(np.random.rand(2,2)),n_arms).reshape(2,2,n_arms) # viscosity matrix
 
 
     def inverse_M(self, theta2): # this methods allows to compute the inverse of matrix (function) M(theta2)
 
         M11 = torch.squeeze(self.alpha + self.omega * torch.cos(theta2))
 
+
         M12 = torch.squeeze(0.5 * self.omega * torch.cos(theta2) + self.beta)
+
 
         denom = torch.squeeze(M11 * self.M22 - M12**2)
 
-
         #M22 = torch.Tensor([self.M22]).repeat(len(M11)) for 1d tensor, always use expand instead of repeat
-        M22 = torch.Tensor([self.M22]).expand(len(M11))
-
+        M22 = torch.Tensor([self.M22]).expand(self.n_arms)
 
 
         return (1 / denom) * torch.cat([M22, -M12, -M12, M11]).reshape(2,2,-1) # make 2x2xn Tensor with each corresponding entry
@@ -74,7 +75,9 @@ class Parall_Arm_model:
         C12 = torch.mul(- d_theta2, c)
         C21 = torch.mul(d_theta1, c)
 
-        return torch.cat([C11, C12, C21, torch.Tensor([0]).expand(len(theta2))]).reshape(2, 2, -1)
+
+        return torch.cat([C11, C12, C21, torch.Tensor([0]).expand(self.n_arms)]).reshape(2, 2, -1)
+
 
 
     def dynamical_system(self,t,y,u1,u2): # create equivalent 1st order dynamical system of equations to be passed to solve_ivp
@@ -82,23 +85,83 @@ class Parall_Arm_model:
 
         inv_MM = self.inverse_M(y[:,1])
 
-
         CC = self.computeC(y[:,1],y[:,2],y[:,3])
 
-        #CHECK ALL SLICING MAY NEED TO INDEX OPPOSIDE WAY E.G. [1,:] ETC..
+        d_thet = torch.stack([y[:,2],y[:,3]]) # cat: concatenate along given dim, stack: concatenate along new dim
 
-        # NEED TO MAKE SURE AXIS OF Y MATCHES WITH WAY EINSUM COMPUTED!
-        dy = torch.cat(y[:,2],y[:,3]).reshape(2,-1)
+        torques = torch.stack([y[:,4],y[:,5]])
 
-        torques = torch.cat(y[:,4],y[:,5]).reshape(2,-1)
-        eq_rhs = torques - torch.einsum("ijk,jk -> ik",CC, dy) + torch.einsum("ijk,jk -> ik",self.F,dy)
+        eq_rhs = torques - torch.einsum("ijk,jk -> ik",CC, d_thet) + torch.einsum("ijk,jk -> ik",self.F,d_thet)
 
         d_eq = torch.einsum("ijk,jk -> ik", inv_MM, eq_rhs)
 
-        dydt = torch.cat([y[:,2], y[:,3], d_eq[0,:].T, d_eq[1,:].T, y[:,6], y[:,7], u1, u2]) # NEED TO REDEFINE IT
-
+        dydt = torch.stack([y[:,2], y[:,3], d_eq[0,:], d_eq[1,:], y[:,6], y[:,7], u1, u2]).T # NEED TO REDEFINE IT
 
         return dydt
+
+        # print(y[:,2].size())
+        # print(y[:, 3].size())
+        # print(d_eq[0,:].T.size())
+        # print(d_eq[1,:].T.size())
+        # print(y[:, 6].size())
+        # print(y[:, 7].size())
+        # print(u1.size())
+        # print(u2.size())
+        # print(d_eq)
+        # exit()
+
+
+
+    def fixed_RK_4(self, t_step,u):
+
+        n_iterations = int((self.tspan[1] - self.tspan[0]) / t_step)
+
+        # n_iterations = np.copy(t_step)
+        # t_step = self.tspan[1] / n_iterations
+
+
+        t_ = None # pass empty t as not used by the system
+
+        y = []
+
+        c_y = self.x0
+
+        c_t = 0
+
+        t = []
+
+        t.append(c_t)
+
+
+        for _ in range(n_iterations):
+
+            y.append(c_y.detach().clone()) # store intermediate values, but without keeping track of gradient for each
+
+            # Compute 4 different slopes to perfom the update
+
+            k1 = self.dynamical_system(t_,c_y,u[:,0],u[:,1])
+
+            n_y = c_y + (k1 * t_step/2)
+
+            k2 = self.dynamical_system(t_, n_y,u[:,0],u[:,1])
+
+            n_y = c_y + (k2 * t_step / 2)
+
+            k3 = self.dynamical_system(t_, n_y, u[:,0], u[:,1])
+
+            n_y = c_y + (k3 * t_step)
+
+            k4 = self.dynamical_system(t_, n_y, u[:,0], u[:,1])
+
+            c_y += t_step * (1/6) * (k1 + 2*k2 + 2*k3 + k4)
+
+            c_t += t_step
+
+            t.append(c_t)
+
+        y.append(c_y) # store final locations, which contains backward gradient, through all previous points
+
+        return t, torch.stack(y)
 
 
     def perfom_reaching(self, u):
