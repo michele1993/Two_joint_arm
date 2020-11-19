@@ -8,17 +8,14 @@ from torch.distributions import Normal
 class Reinf_Agent(nn.Module): # inherit for easier managing of trainable parameters
 
 
-    def __init__(self,n, std = 0.5, ln_rate= 0.1, discount = 0.95):
+    def __init__(self,n,n_arms=1, std = 0.5, ln_rate= 0.1, discount = 0.95):
 
         super().__init__()
-
+        self.n_arms = n_arms
         self.discount = discount
         self.std = std
-        self.mu_s = nn.Parameter(torch.randn(n-1,2) *10) #*10  #  initalise means randomly, one less, than data points - since itegrate in pairs of values
+        self.mu_s = nn.Parameter(torch.randn(n-1,2) *10) # initalise means randomly, one less, than data points - since itegrate in pairs of values
         self.optimiser = opt.Adam(self.parameters(),ln_rate)
-        #self.optimiser = opt.SGD(self.parameters(),ln_rate)
-        #print(list(self.parameters())[0] is self.mu_s)
-
 
 
 
@@ -28,18 +25,16 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
 
         d = Normal(self.mu_s, self.std)
 
-        sampled_as = d.sample()
+        sampled_as = d.sample((self.n_arms,))
 
         self.log_ps = d.log_prob(sampled_as)
 
-
-        return sampled_as
+        return sampled_as.reshape(-1,2,1)
 
 
     def update(self, dis_rwd):
 
-
-        loss = torch.sum(self.log_ps * dis_rwd)# dis_rwd.reshape(-1,1) #.mean() # check that product is element-wise, may need log_ps.view(-1)
+        loss = torch.sum(self.log_ps * dis_rwd.reshape(-1,1,1))# dis_rwd.reshape(-1,1) #.mean() # check that product is element-wise, may need log_ps.view(-1)
 
         self.optimiser.zero_grad()
         loss.backward()

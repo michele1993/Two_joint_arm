@@ -9,7 +9,7 @@ import torch
 
 class Parall_Arm_model:
 
-    def __init__(self, n_arms=10, height=1.8, mass=80, tspan = [0, 0.4],x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]],n_points = 40):
+    def __init__(self, n_arms=10, height=1.8, mass=80, tspan = [0, 0.4],x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]):
 
 
         # Simulation parameters
@@ -20,8 +20,6 @@ class Parall_Arm_model:
 
         #I fear that by sharing memory location of x0(i.e. with expand()) may get some weird unpredicted error, better not risk it
         self.x0 = torch.Tensor(x0).repeat(self.n_arms, 1, 1)
-        self.eval_points = np.linspace(tspan[0], tspan[1], n_points)
-
 
         # Mass and height of ppt
         self.M = mass
@@ -91,44 +89,21 @@ class Parall_Arm_model:
 
         CC = self.computeC(y[:,1],y[:,2],y[:,3])
 
-
-        #d_thet = torch.stack([y[:,2],y[:,3]]) # cat: concatenate along given dim, stack: concatenate along new dim
         d_thet = y[:,2:4]
 
-        #torques = torch.stack([y[:,4],y[:,5]])
         torques = y[:,4:6]
 
-        #eq_rhs = torques - torch.einsum("ijk,jk -> ik",CC, d_thet) + torch.einsum("ijk,jk -> ik",self.F,d_thet)
         eq_rhs = torques - CC @ d_thet + self.F @ d_thet
 
-        #d_eq = torch.einsum("ijk,jk -> ik", inv_MM, eq_rhs)
         d_eq = inv_MM @ eq_rhs
 
-        dydt = torch.cat([d_thet, d_eq, y[:,6:8],u],dim=1)
-
-        #dydt = torch.stack([y[:,2], y[:,3], d_eq[0,:], d_eq[1,:], y[:,6], y[:,7], u1, u2]).T # NEED TO REDEFINE IT
-
-        return dydt
-
-        # print(y[:,2].size())
-        # print(y[:, 3].size())
-        # print(d_eq[0,:].T.size())
-        # print(d_eq[1,:].T.size())
-        # print(y[:, 6].size())
-        # print(y[:, 7].size())
-        # print(u1.size())
-        # print(u2.size())
-        # print(d_eq)
-        # exit()
+        return torch.cat([d_thet, d_eq, y[:,6:8],u],dim=1)
 
 
 
-    def fixed_RK_4(self, t_step,u):
+    def perform_reaching(self, t_step,u):
 
         n_iterations = int((self.tspan[1] - self.tspan[0]) / t_step)
-
-        # n_iterations = np.copy(t_step)
-        # t_step = self.tspan[1] / n_iterations
 
         t_ = None # pass empty t as not used by the system
         y = []
@@ -168,35 +143,16 @@ class Parall_Arm_model:
         return t, torch.stack(y)
 
 
-    def perfom_reaching(self, u):
-
-        x0 = self.x0
-        t0 = self.tspan[0]
-        i = 0
-        y = []
-        y.append(x0)
-
-
-
-        for it in self.eval_points[1:]:
-
-            solutions = solve_ivp(self.dynamical_system, [t0, it], x0, args=(u[i,0], u[i,1]))
-
-
-            x0 = solutions.y.T[-1,:] # transponse solution for desired format
-            y.append(x0)
-            t0 = it
-            i+=1
-
-        return self.eval_points, np.array(y)
 
 
     def compute_rwd(self,y, x_hat,y_hat): # based on average distance of last five points from target
 
-        [x_c, y_c] = self.convert_coord(y[-1:, 0], y[-1:, 1])#self.convert_coord(y[-5:, 0], y[-5:, 1])
+
+        [x_c, y_c] = self.convert_coord(y[-1:, :,0], y[-1:,:, 1])#self.convert_coord(y[-5:, 0], y[-5:, 1])
 
 
-        return - np.mean(np.sqrt((y_hat - y_c)**2 + (x_hat - x_c)**2))
+
+        return - torch.sqrt((y_hat - y_c)**2 + (x_hat - x_c)**2)
 
 
 
