@@ -47,7 +47,7 @@ class Parall_Arm_model:
         self.omega = 2 * m2 * self.l1 * lc2
 
         M22 = torch.Tensor([m2 * lc2 ** 2 + I2])
-        self.M22 = M22.expand(self.n_arms,1)
+        self.M22 = M22.repeat(self.n_arms,1)
 
 
         self.beta = m2 * lc2**2 + I2
@@ -59,6 +59,7 @@ class Parall_Arm_model:
 
 
     def inverse_M(self, theta2): # this methods allows to compute the inverse of matrix (function) M(theta2)
+
 
 
         M11 = self.alpha + self.omega * torch.cos(theta2)
@@ -86,6 +87,7 @@ class Parall_Arm_model:
 
 
         inv_MM = self.inverse_M(y[:,1])
+
 
         CC = self.computeC(y[:,1],y[:,2],y[:,3])
 
