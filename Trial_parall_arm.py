@@ -3,11 +3,14 @@ from Arm_model import Arm_model
 import numpy as np
 import torch
 
-n_arms = 3
+n_arms = 2
 tspan = [0, 0.4]
-paralell_arms = Parall_Arm_model(n_arms=n_arms, tspan = tspan)
+paralell_arms1 = Parall_Arm_model(n_arms=n_arms, tspan = tspan)
 
-arm1 = Arm_model(tspan = tspan)
+n_arms2 = 3
+paralell_arms2 = Parall_Arm_model(n_arms= n_arms2, tspan = tspan)
+
+#arm1 = Arm_model(tspan = tspan)
 
 
 
@@ -20,17 +23,31 @@ arm1 = Arm_model(tspan = tspan)
 t_step = 0.01
 
 u = [50,-50]
-t,y = arm1.fixed_RK_4(t_step,u)
 
-p_u = torch.Tensor(u).repeat(n_arms).reshape(n_arms, -1)
-prl_t,prl_y = paralell_arms.fixed_RK_4(t_step,p_u)
+
+#t,y = arm1.fixed_RK_4(t_step,u)
+
+#p_u = torch.Tensor(u).repeat(n_arms).reshape(n_arms, -1)
+
+p_u = torch.Tensor(u).reshape(2,1).repeat(n_arms,1,1) # input must be in shape: n_arms x 2 x 1
+
+
+prl_t,prl_y = paralell_arms1.fixed_RK_4(t_step,p_u)
+
+p_u2 = torch.Tensor(u).reshape(2,1).repeat(n_arms2,1,1)
+prl_t2,prl_y2 = paralell_arms2.fixed_RK_4(t_step,p_u2)
+
+
+#prl_y = torch.squeeze(prl_y)
 
 for i in range(int(tspan[1]/ t_step)+1):
 
-    #print(torch.mean(prl_y[i,:,:],dim=0))
-    #print(torch.Tensor(y[i]),"\n")
+
     print(i)
-    print(sum(np.abs(torch.mean(prl_y[i,:,:],dim=0) - torch.Tensor(y[i]))),'\n')
+
+    print(sum(np.abs(torch.mean(prl_y[i], dim=0) - torch.mean(prl_y2[i], dim=0))), '\n')
+    #print(sum(np.abs(torch.mean(prl_y[i],dim=0) - torch.Tensor(y[i]))),'\n')
+
 
 # for i in range(101):
 #

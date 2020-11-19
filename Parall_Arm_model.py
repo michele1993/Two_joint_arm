@@ -9,13 +9,18 @@ import torch
 
 class Parall_Arm_model:
 
-    def __init__(self, n_arms=10, height=1.8, mass=80, tspan = [0, 0.4],x0 = [-np.pi/2, np.pi/2, 0, 0, 0, 0, 0, 0],n_points = 40):
+    def __init__(self, n_arms=10, height=1.8, mass=80, tspan = [0, 0.4],x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]],n_points = 40):
+
 
         # Simulation parameters
         self.tspan = tspan
-        self.x0 = torch.Tensor(x0).repeat(n_arms).reshape(n_arms,-1)
-        self.eval_points = np.linspace(tspan[0], tspan[1], n_points)
         self.n_arms = n_arms
+
+        #self.x0 = torch.Tensor(x0).expand(self.n_arms,-1,-1) # -1 leaves dim unchaged, for 1d tensor, always use expand instead of repeat
+
+        #I fear that by sharing memory location of x0(i.e. with expand()) may get some weird unpredicted error, better not risk it
+        self.x0 = torch.Tensor(x0).repeat(self.n_arms, 1, 1)
+        self.eval_points = np.linspace(tspan[0], tspan[1], n_points)
 
 
         # Mass and height of ppt
@@ -40,29 +45,29 @@ class Parall_Arm_model:
 
         self.alpha = m1 * lc1**2 + I1 + m2 * lc2**2 + I2 + m2* self.l1**2
         self.omega = 2 * m2 * self.l1 * lc2
-        self.M22 = m2 * lc2**2 + I2
+
+        M22 = torch.Tensor([m2 * lc2 ** 2 + I2])
+        self.M22 = M22.expand(self.n_arms,1)
+
+
         self.beta = m2 * lc2**2 + I2
         self.delta = m2 * self.l1 * lc2
 
         np.random.seed(1)
-        self.F = torch.repeat_interleave(torch.Tensor(np.random.rand(2,2)),n_arms).reshape(2,2,n_arms) # viscosity matrix
+        self.F = torch.Tensor(np.random.rand(2,2)).repeat(n_arms,1,1) # repeat in first dimension given n of arms
+
 
 
     def inverse_M(self, theta2): # this methods allows to compute the inverse of matrix (function) M(theta2)
 
-        M11 = torch.squeeze(self.alpha + self.omega * torch.cos(theta2))
 
+        M11 = self.alpha + self.omega * torch.cos(theta2)
 
-        M12 = torch.squeeze(0.5 * self.omega * torch.cos(theta2) + self.beta)
+        M12 = 0.5 * self.omega * torch.cos(theta2) + self.beta
 
+        denom = M11 * self.M22 - M12 ** 2
 
-        denom = torch.squeeze(M11 * self.M22 - M12**2)
-
-        #M22 = torch.Tensor([self.M22]).repeat(len(M11)) for 1d tensor, always use expand instead of repeat
-        M22 = torch.Tensor([self.M22]).expand(self.n_arms)
-
-
-        return (1 / denom) * torch.cat([M22, -M12, -M12, M11]).reshape(2,2,-1) # make 2x2xn Tensor with each corresponding entry
+        return ((1 / denom) * torch.cat([self.M22, -M12, -M12, M11],dim=1)).reshape(-1,2,2) # make 2x2xn Tensor with each corresponding entry
 
 
     def computeC(self, theta2, d_theta1, d_theta2): # precompute the matrix (function) C(theta2, dtheta1, dtheta2)
@@ -73,27 +78,33 @@ class Parall_Arm_model:
         C12 = torch.mul(- d_theta2, c)
         C21 = torch.mul(d_theta1, c)
 
-
-        return torch.cat([C11, C12, C21, torch.Tensor([0]).expand(self.n_arms)]).reshape(2, 2, -1)
-
+        return torch.cat([C11, C12, C21, torch.Tensor([[0]]).expand(self.n_arms,1)],dim=1).reshape(-1,2,2)
 
 
-    def dynamical_system(self,t,y,u1,u2): # create equivalent 1st order dynamical system of equations to be passed to solve_ivp
+
+    def dynamical_system(self,t,y,u): # create equivalent 1st order dynamical system of equations to be passed to solve_ivp
 
 
         inv_MM = self.inverse_M(y[:,1])
 
         CC = self.computeC(y[:,1],y[:,2],y[:,3])
 
-        d_thet = torch.stack([y[:,2],y[:,3]]) # cat: concatenate along given dim, stack: concatenate along new dim
 
-        torques = torch.stack([y[:,4],y[:,5]])
+        #d_thet = torch.stack([y[:,2],y[:,3]]) # cat: concatenate along given dim, stack: concatenate along new dim
+        d_thet = y[:,2:4]
 
-        eq_rhs = torques - torch.einsum("ijk,jk -> ik",CC, d_thet) + torch.einsum("ijk,jk -> ik",self.F,d_thet)
+        #torques = torch.stack([y[:,4],y[:,5]])
+        torques = y[:,4:6]
 
-        d_eq = torch.einsum("ijk,jk -> ik", inv_MM, eq_rhs)
+        #eq_rhs = torques - torch.einsum("ijk,jk -> ik",CC, d_thet) + torch.einsum("ijk,jk -> ik",self.F,d_thet)
+        eq_rhs = torques - CC @ d_thet + self.F @ d_thet
 
-        dydt = torch.stack([y[:,2], y[:,3], d_eq[0,:], d_eq[1,:], y[:,6], y[:,7], u1, u2]).T # NEED TO REDEFINE IT
+        #d_eq = torch.einsum("ijk,jk -> ik", inv_MM, eq_rhs)
+        d_eq = inv_MM @ eq_rhs
+
+        dydt = torch.cat([d_thet, d_eq, y[:,6:8],u],dim=1)
+
+        #dydt = torch.stack([y[:,2], y[:,3], d_eq[0,:], d_eq[1,:], y[:,6], y[:,7], u1, u2]).T # NEED TO REDEFINE IT
 
         return dydt
 
@@ -117,19 +128,12 @@ class Parall_Arm_model:
         # n_iterations = np.copy(t_step)
         # t_step = self.tspan[1] / n_iterations
 
-
         t_ = None # pass empty t as not used by the system
-
         y = []
-
         c_y = self.x0
-
         c_t = 0
-
         t = []
-
         t.append(c_t)
-
 
         for _ in range(n_iterations):
 
@@ -137,19 +141,19 @@ class Parall_Arm_model:
 
             # Compute 4 different slopes to perfom the update
 
-            k1 = self.dynamical_system(t_,c_y,u[:,0],u[:,1])
+            k1 = self.dynamical_system(t_,c_y,u)
 
             n_y = c_y + (k1 * t_step/2)
 
-            k2 = self.dynamical_system(t_, n_y,u[:,0],u[:,1])
+            k2 = self.dynamical_system(t_, n_y,u)
 
             n_y = c_y + (k2 * t_step / 2)
 
-            k3 = self.dynamical_system(t_, n_y, u[:,0], u[:,1])
+            k3 = self.dynamical_system(t_, n_y, u)
 
             n_y = c_y + (k3 * t_step)
 
-            k4 = self.dynamical_system(t_, n_y, u[:,0], u[:,1])
+            k4 = self.dynamical_system(t_, n_y, u)
 
             c_y += t_step * (1/6) * (k1 + 2*k2 + 2*k3 + k4)
 
