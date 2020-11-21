@@ -9,7 +9,7 @@ import torch
 
 class Parall_Arm_model:
 
-    def __init__(self, n_arms=10, height=1.8, mass=80, tspan = [0, 0.4],x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]):
+    def __init__(self,tspan, n_arms=10, height=1.8, mass=80,x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]):
 
 
         # Simulation parameters
@@ -83,26 +83,9 @@ class Parall_Arm_model:
 
     def dynamical_system(self,t,y,u): # create equivalent 1st order dynamical system of equations to be passed to solve_ivp
 
-
-        if torch.sum(torch.isnan(y)) >0:
-            print('y')
-            print(y)
-            exit()
-
         inv_MM = self.inverse_M(y[:,1])
 
-        if torch.sum(torch.isnan(inv_MM)) >0:
-            print('MM')
-            print(inv_MM)
-            exit()
-
-
         CC = self.computeC(y[:,1],y[:,2],y[:,3])
-
-        if torch.sum(torch.isnan(CC)) > 0:
-            print('CC')
-            print(CC)
-            exit()
 
         d_thet = y[:,2:4]
 
@@ -113,6 +96,12 @@ class Parall_Arm_model:
         d_eq = inv_MM @ eq_rhs
 
         return torch.cat([d_thet, d_eq, y[:,6:8],u],dim=1)
+
+
+    # if torch.sum(torch.isnan(y)) >0: # check if y contains any nan
+    #     print('y')
+    #     print(y)
+    #     exit()
 
 
 
@@ -127,25 +116,26 @@ class Parall_Arm_model:
         t = []
         t.append(c_t)
 
-        for _ in range(n_iterations):
+
+        for it in range(n_iterations):
 
             y.append(c_y.detach().clone()) # store intermediate values, but without keeping track of gradient for each
 
             # Compute 4 different slopes to perfom the update
 
-            k1 = self.dynamical_system(t_,c_y,u)
+            k1 = self.dynamical_system(t_,c_y,u[:,:,it:it+1]) # use it:it+1 to keep the dim of original tensor without slicing
 
             n_y = c_y + (k1 * t_step/2)
 
-            k2 = self.dynamical_system(t_, n_y,u)
+            k2 = self.dynamical_system(t_, n_y,u[:,:,it:it+1])
 
             n_y = c_y + (k2 * t_step / 2)
 
-            k3 = self.dynamical_system(t_, n_y, u)
+            k3 = self.dynamical_system(t_, n_y, u[:,:,it:it+1])
 
             n_y = c_y + (k3 * t_step)
 
-            k4 = self.dynamical_system(t_, n_y, u)
+            k4 = self.dynamical_system(t_, n_y, u[:,:,it:it+1])
 
             c_y += t_step * (1/6) * (k1 + 2*k2 + 2*k3 + k4)
 
@@ -167,7 +157,7 @@ class Parall_Arm_model:
 
 
 
-        return - torch.sqrt((y_hat - y_c)**2 + (x_hat - x_c)**2)
+        return torch.sqrt((y_hat - y_c)**2 + (x_hat - x_c)**2)
 
 
 

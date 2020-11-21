@@ -8,13 +8,13 @@ from torch.distributions import Normal
 class Reinf_Agent(nn.Module): # inherit for easier managing of trainable parameters
 
 
-    def __init__(self,n,n_arms=1, std = 0.5, ln_rate= 0.1, discount = 0.95):
+    def __init__(self,n,n_arms=1, std = 10, ln_rate= 10, discount = 0.95):
 
         super().__init__()
         self.n_arms = n_arms
         self.discount = discount
         self.std = std
-        self.mu_s = nn.Parameter(torch.randn(n-1,2) *10) # initalise means randomly, one less, than data points - since itegrate in pairs of values
+        self.mu_s = nn.Parameter(torch.randn(n,2) *10) # initalise means randomly
         self.optimiser = opt.Adam(self.parameters(),ln_rate)
 
 
@@ -27,13 +27,14 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
 
         sampled_as = d.sample((self.n_arms,))
 
+
         self.log_ps = d.log_prob(sampled_as)
 
-        return sampled_as.reshape(-1,2,1)
+
+        return torch.transpose(sampled_as,1,2) # sampled_as.reshape(-1,2,1) # transpose the 2nd and 3rd dimensior to make it fit RK4 and dynamical system, batchx2xn_steps
 
 
     def update(self, dis_rwd):
-
 
         loss = torch.sum(self.log_ps * dis_rwd.reshape(-1,1,1))# dis_rwd.reshape(-1,1) #.mean() # check that product is element-wise, may need log_ps.view(-1)
 
@@ -69,6 +70,9 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
         n = torch.Tensor(range(len(self.mu_s)))
 
         return rwd * self.discount**n
+
+    def test_actions(self):
+        return self.mu_s.T
 
 
     # MAY WANT TO INCLUDE BASELINE!

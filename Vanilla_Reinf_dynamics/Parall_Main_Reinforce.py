@@ -3,32 +3,35 @@ from Vanilla_Reinf_dynamics.Vanilla_Reinf_Agent import Reinf_Agent
 import torch
 
 
-episodes = 100000
-n_parameters = 2
-t_print = 100
-n_arms = 50
+episodes = 1000
+n_RK_steps = 100
+n_parametrised_steps = n_RK_steps
+t_print = 50
+n_arms = 5000
 
-# Target endpoint, based on matlab - reach strainght in fron at shoulder height
+# Target endpoint, based on matlab - reach straight in front, at shoulder height
 x_hat = 0.792
 y_hat = 0
 
+tspan = [0, 0.4]
 
-arm = Parall_Arm_model(n_arms=n_arms,tspan = [0, 0.4])
-agent = Reinf_Agent(n_parameters,n_arms)
+
+training_arm = Parall_Arm_model(tspan,n_arms=n_arms)
+agent = Reinf_Agent(n_parametrised_steps,n_arms)
 
 ep_rwds = []
 avr_rwd = 0
 alpha =  0.01
-t_step = 0.4/100
+t_step = tspan[-1]/n_RK_steps
 
 
 for ep in range(episodes):
 
     actions = agent.sample_a() # may need converting to numpy since it's a tensor
 
-    t, thetas = arm.perform_reaching(t_step,actions)
+    t, thetas = training_arm.perform_reaching(t_step,actions)
 
-    rwd = arm.compute_rwd(thetas,x_hat,y_hat)
+    rwd = training_arm.compute_rwd(thetas,x_hat,y_hat)
 
     advantage = rwd - avr_rwd
 
@@ -40,8 +43,18 @@ for ep in range(episodes):
 
     if ep % t_print == 0:
 
-        print(torch.mean(sum(ep_rwds)/t_print))
+        print("episode: ", ep)
+        print("training accuracy: ",torch.mean(sum(ep_rwds)/t_print),'\n')
         ep_rwds = []
 
+
+test_arm = Parall_Arm_model(tspan,n_arms=1)
+test_actions = torch.unsqueeze(agent.test_actions(),0).detach()
+
+t_t, t_y = test_arm.perform_reaching(t_step,test_actions)
+
+tst_accuracy = test_arm.compute_rwd(t_y,x_hat,y_hat)
+
+print("Test accuracy: ",tst_accuracy)
 
         #print(agent.mu_s)
