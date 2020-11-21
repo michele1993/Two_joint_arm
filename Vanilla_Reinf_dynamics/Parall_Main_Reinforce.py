@@ -5,7 +5,7 @@ import torch
 
 episodes = 100000
 n_parameters = 2
-t_print = 10
+t_print = 100
 n_arms = 50
 
 # Target endpoint, based on matlab - reach strainght in fron at shoulder height
@@ -42,5 +42,6 @@ for ep in range(episodes):
 
         print(torch.mean(sum(ep_rwds)/t_print))
         ep_rwds = []
+
 
         #print(agent.mu_s)

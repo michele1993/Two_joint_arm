@@ -84,10 +84,25 @@ class Parall_Arm_model:
     def dynamical_system(self,t,y,u): # create equivalent 1st order dynamical system of equations to be passed to solve_ivp
 
 
+        if torch.sum(torch.isnan(y)) >0:
+            print('y')
+            print(y)
+            exit()
+
         inv_MM = self.inverse_M(y[:,1])
+
+        if torch.sum(torch.isnan(inv_MM)) >0:
+            print('MM')
+            print(inv_MM)
+            exit()
 
 
         CC = self.computeC(y[:,1],y[:,2],y[:,3])
+
+        if torch.sum(torch.isnan(CC)) > 0:
+            print('CC')
+            print(CC)
+            exit()
 
         d_thet = y[:,2:4]
 
@@ -107,7 +122,7 @@ class Parall_Arm_model:
 
         t_ = None # pass empty t as not used by the system
         y = []
-        c_y = self.x0
+        c_y = self.x0.clone() # need to detach ?
         c_t = 0
         t = []
         t.append(c_t)
