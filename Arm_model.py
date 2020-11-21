@@ -159,8 +159,8 @@ class Arm_model:
         # run integration one u-input at the time to avoid convergence problem
         for it in self.eval_points[1:]: # select all as upper bound of time interval, but first value which is represented by t0
 
-            #solutions = solve_ivp(self.dynamical_system, [t0, it], x0, args=(u[i,0], u[i,1]))
-            solutions = solve_ivp(self.dynamical_system, [t0, it], x0, args=(u[0,0], u[0,1]))
+            #solutions = solve_ivp(self.dynamical_system, [t0, it], x0, args=(u[0], u[1]))
+            solutions = solve_ivp(self.dynamical_system, [t0, it], x0, args=(u[i,0], u[i,1]))
             x0 = solutions.y.T[-1,:] # transponse solution for desired format
             y.append(x0) #store last value of integration for that interval, corresponding to the desired time value
             t0 = it

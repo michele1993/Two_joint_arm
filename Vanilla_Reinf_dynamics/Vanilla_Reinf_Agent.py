@@ -74,6 +74,9 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
 
         return rwd * self.discount**n
 
+    def test_actions(self,n):
+
+        return self.mu_s
 
     # MAY WANT TO INCLUDE BASELINE!
 

@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 
-episodes = 100000
+episodes = 35000
 eval_points = 2
 t_print = 500
 
@@ -57,3 +57,10 @@ for ep in range(episodes):
         #print(agent.mu_s)
 
 
+test_actions = agent.test_actions(eval_points )
+
+t_t, t_y = arm.perfom_reaching(test_actions)
+
+t_accuracy = torch.Tensor([arm.compute_rwd(t_y,x_hat,y_hat)])
+
+print("Test Accuracy: ", t_accuracy)
