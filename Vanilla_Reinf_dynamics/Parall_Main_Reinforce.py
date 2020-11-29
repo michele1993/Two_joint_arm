@@ -1,6 +1,8 @@
 from Parall_Arm_model import Parall_Arm_model
 from Vanilla_Reinf_dynamics.Vanilla_Reinf_Agent import Reinf_Agent
 import torch
+from safety_checks.Video_arm_config import Video_arm
+import numpy as np
 
 
 episodes = 1000
@@ -23,6 +25,7 @@ ep_rwds = []
 avr_rwd = 0
 alpha =  0.01
 t_step = tspan[-1]/n_RK_steps
+
 
 
 for ep in range(episodes):
@@ -56,5 +59,9 @@ t_t, t_y = test_arm.perform_reaching(t_step,test_actions)
 tst_accuracy = test_arm.compute_rwd(t_y,x_hat,y_hat)
 
 print("Test accuracy: ",tst_accuracy)
+
+
+video1 = Video_arm(test_arm, np.squeeze(t_y.numpy()), np.array(t_t),fps = 60)
+video1.make_video()
 
         #print(agent.mu_s)

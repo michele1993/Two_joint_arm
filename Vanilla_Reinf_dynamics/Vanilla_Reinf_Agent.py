@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as opt
 from torch.distributions import Normal
 
+
 # create agent using REINFORCE
 
 class Reinf_Agent(nn.Module): # inherit for easier managing of trainable parameters
@@ -29,6 +30,11 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
 
 
         self.log_ps = d.log_prob(sampled_as)
+
+
+        # sampled_as = self.gaussian_convol(torch.transpose(sampled_as,1,2))
+        # print(sampled_as.size())
+        # exit()
 
 
         return torch.transpose(sampled_as,1,2) # sampled_as.reshape(-1,2,1) # transpose the 2nd and 3rd dimensior to make it fit RK4 and dynamical system, batchx2xn_steps
@@ -75,6 +81,15 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
         return self.mu_s.T
 
 
+    def gaussian_convol(self,actions):
+
+        kernel = torch.FloatTensor([[[0.006, 0.061, 0.242, 0.383, 0.242, 0.061,0.006]]])
+
+        actions[:,0,:] =  nn.functional.conv1d(actions[:,0:1,:], kernel,padding=(kernel.size()[-1]-1)//2)
+
+        actions[:,1,:] =  nn.functional.conv1d(actions[:,1:2,:], kernel,padding=(kernel.size()[-1]-1)//2)
+
+        return actions
     # MAY WANT TO INCLUDE BASELINE!
 
 
