@@ -3,16 +3,55 @@ from Arm_model import Arm_model
 import numpy as np
 import torch
 
-n_arms = 3
+torch.set_printoptions(precision=10)
+
+n_arms = 100
 tspan = [0, 0.4]
-paralell_arms = Parall_Arm_model(n_arms=n_arms, tspan = tspan)
+paralell_arms1 = Parall_Arm_model(n_arms=n_arms, tspan = tspan)
+
+n_arms2 = 1000
+paralell_arms2 = Parall_Arm_model(n_arms= n_arms2, tspan = tspan)
 
 arm1 = Arm_model(tspan = tspan)
 
-
-
-
+# ------------------------------------------ RUN SOME TEST FOR DIFFERENCE BETWEEN NUMBER OF ARMS-----
+# a = torch.Tensor([100])
+# theta1_1 = a.repeat(n_arms,1)
+# theta1_2 = a.repeat(n_arms2,1)
 #
+#
+# M1= paralell_arms1.inverse_M(theta1_1)
+# M2= paralell_arms2.inverse_M(theta1_2)
+
+# print(M1[0] == M2[0])
+# print()
+# exit()
+# mM1 = torch.mean(M1,dim=0)
+# mM2 = torch.mean(M2,dim=0)
+# nmM1 = np.mean(M1.numpy(),axis=0)
+# nmM2 = np.mean(M2.numpy(),axis=0)
+# print(mM1)
+# print(mM2)
+# print(torch.eq(mM1,mM2))
+# print(nmM1 == nmM2)
+# print(mM1 == mM2)
+
+
+# b = torch.Tensor([3.12])
+# c = torch.Tensor([4.34])
+#
+# dtheta11 = b.repeat(n_arms,1)
+# dtheta21 = c.repeat(n_arms,1)
+#
+# dtheta12 = b.repeat(n_arms2,1)
+# dtheta22 = c.repeat(n_arms2,1)
+#
+# C1 = torch.mean(paralell_arms1.computeC(theta1_1, dtheta11,dtheta21),dim=0)
+# C2 = torch.mean(paralell_arms2.computeC(theta1_2, dtheta12,dtheta22),dim=0)
+#
+# print(C1==C2)
+
+
 
 
 
@@ -20,17 +59,34 @@ arm1 = Arm_model(tspan = tspan)
 t_step = 0.01
 
 u = [50,-50]
+
+
 t,y = arm1.fixed_RK_4(t_step,u)
 
-p_u = torch.Tensor(u).repeat(n_arms).reshape(n_arms, -1)
-prl_t,prl_y = paralell_arms.fixed_RK_4(t_step,p_u)
+#p_u = torch.Tensor(u).repeat(n_arms).reshape(n_arms, -1)
+
+p_u = torch.Tensor(u).reshape(2,1).repeat(n_arms,1,1) # input must be in shape: n_arms x 2 x 1
+
+
+prl_t,prl_y = paralell_arms1.fixed_RK_4(t_step,p_u)
+
+p_u2 = torch.Tensor(u).reshape(2,1).repeat(n_arms2,1,1)
+prl_t2,prl_y2 = paralell_arms2.fixed_RK_4(t_step,p_u2)
+
+
+prl_y = torch.squeeze(prl_y)
+
 
 for i in range(int(tspan[1]/ t_step)+1):
 
-    #print(torch.mean(prl_y[i,:,:],dim=0))
-    #print(torch.Tensor(y[i]),"\n")
+
     print(i)
-    print(sum(np.abs(torch.mean(prl_y[i,:,:],dim=0) - torch.Tensor(y[i]))),'\n')
+
+    #print(sum(np.abs(np.mean(prl_y[i].numpy(), axis=0) - np.mean(prl_y2[i].numpy(), axis=0))))
+    #print(sum(np.abs(torch.mean(prl_y[i],dim=0) - torch.mean(prl_y2[i],dim=0))),'\n')
+    #print(sum(np.abs(prl_y[i,-1] - prl_y2[i,-1])), '\n')
+    print(sum(np.abs(prl_y[i,0] - torch.Tensor(y[i]))), '\n')
+
 
 # for i in range(101):
 #

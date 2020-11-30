@@ -5,7 +5,7 @@ import matplotlib.animation as animation
 
 class Video_arm:
 
-    def __init__(self, arm, thetas,t):
+    def __init__(self, arm, thetas,t,fps = 20):
 
 
         self.arm = arm
@@ -17,7 +17,7 @@ class Video_arm:
 
         # needed for FuncAnimation()
         Writer = animation.writers['ffmpeg']
-        self.writer = Writer(fps=20, metadata=dict(artist='Me'), bitrate=1800)
+        self.writer = Writer(fps=fps, metadata=dict(artist='Me'), bitrate=1800)
 
 
     # This method needs to be passed to FuncAnimation to make video i idexed plots

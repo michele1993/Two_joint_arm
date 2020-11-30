@@ -3,22 +3,20 @@ import torch.nn as nn
 import torch.optim as opt
 from torch.distributions import Normal
 
+
 # create agent using REINFORCE
 
 class Reinf_Agent(nn.Module): # inherit for easier managing of trainable parameters
 
 
-    def __init__(self,n, std = 0.5, ln_rate= 0.1, discount = 0.95):
+    def __init__(self,n,n_arms=1, std = 10, ln_rate= 10, discount = 0.95):
 
         super().__init__()
-
+        self.n_arms = n_arms
         self.discount = discount
         self.std = std
-        self.mu_s = nn.Parameter(torch.randn(n-1,2) *10) #*10  #  initalise means randomly, one less, than data points - since itegrate in pairs of values
+        self.mu_s = nn.Parameter(torch.randn(n,2) *10) # initalise means randomly
         self.optimiser = opt.Adam(self.parameters(),ln_rate)
-        #self.optimiser = opt.SGD(self.parameters(),ln_rate)
-        #print(list(self.parameters())[0] is self.mu_s)
-
 
 
 
@@ -28,18 +26,23 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
 
         d = Normal(self.mu_s, self.std)
 
-        sampled_as = d.sample()
+        sampled_as = d.sample((self.n_arms,))
+
 
         self.log_ps = d.log_prob(sampled_as)
 
 
-        return sampled_as
+        # sampled_as = self.gaussian_convol(torch.transpose(sampled_as,1,2))
+        # print(sampled_as.size())
+        # exit()
+
+
+        return torch.transpose(sampled_as,1,2) # sampled_as.reshape(-1,2,1) # transpose the 2nd and 3rd dimensior to make it fit RK4 and dynamical system, batchx2xn_steps
 
 
     def update(self, dis_rwd):
 
-
-        loss = torch.sum(self.log_ps * dis_rwd)# dis_rwd.reshape(-1,1) #.mean() # check that product is element-wise, may need log_ps.view(-1)
+        loss = torch.sum(self.log_ps * dis_rwd.reshape(-1,1,1))# dis_rwd.reshape(-1,1) #.mean() # check that product is element-wise, may need log_ps.view(-1)
 
         self.optimiser.zero_grad()
         loss.backward()
@@ -74,10 +77,19 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
 
         return rwd * self.discount**n
 
-    def test_actions(self,n):
+    def test_actions(self):
+        return self.mu_s.T
 
-        return self.mu_s
 
+    def gaussian_convol(self,actions):
+
+        kernel = torch.FloatTensor([[[0.006, 0.061, 0.242, 0.383, 0.242, 0.061,0.006]]])
+
+        actions[:,0,:] =  nn.functional.conv1d(actions[:,0:1,:], kernel,padding=(kernel.size()[-1]-1)//2)
+
+        actions[:,1,:] =  nn.functional.conv1d(actions[:,1:2,:], kernel,padding=(kernel.size()[-1]-1)//2)
+
+        return actions
     # MAY WANT TO INCLUDE BASELINE!
 
 
