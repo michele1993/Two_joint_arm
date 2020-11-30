@@ -1,7 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from scipy.integrate import solve_ivp
 import torch
 
 

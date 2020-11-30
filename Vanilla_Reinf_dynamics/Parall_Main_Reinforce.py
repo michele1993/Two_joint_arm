@@ -61,7 +61,7 @@ tst_accuracy = test_arm.compute_rwd(t_y,x_hat,y_hat)
 print("Test accuracy: ",tst_accuracy)
 
 
-video1 = Video_arm(test_arm, np.squeeze(t_y.numpy()), np.array(t_t),fps = 60)
-video1.make_video()
+#video1 = Video_arm(test_arm, np.squeeze(t_y.numpy()), np.array(t_t),fps = 60)
+#video1.make_video()
 
         #print(agent.mu_s)
