@@ -10,6 +10,8 @@ n_RK_steps = 100
 n_parametrised_steps = n_RK_steps
 t_print = 50
 n_arms = 5000
+x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
+dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 # Target endpoint, based on matlab - reach straight in front, at shoulder height
 x_hat = 0.792
@@ -18,8 +20,8 @@ y_hat = 0
 tspan = [0, 0.4]
 
 
-training_arm = Parall_Arm_model(tspan,n_arms=n_arms)
-agent = Reinf_Agent(n_parametrised_steps,n_arms)
+training_arm = Parall_Arm_model(tspan,x0,dev, n_arms=n_arms)
+agent = Reinf_Agent(n_parametrised_steps,dev,n_arms= n_arms).to(dev)
 
 ep_rwds = []
 avr_rwd = 0
@@ -50,8 +52,14 @@ for ep in range(episodes):
         print("training accuracy: ",torch.mean(sum(ep_rwds)/t_print),'\n')
         ep_rwds = []
 
+        if dev.type == 'cuda':
+            print(torch.cuda.get_device_name(0))
+            print('Memory Usage:')
+            print('Allocated:', round(torch.cuda.memory_allocated(0) / 1024 ** 3, 1), 'GB')
+            print('Cached:   ', round(torch.cuda.memory_reserved(0) / 1024 ** 3, 1), 'GB')
 
-test_arm = Parall_Arm_model(tspan,n_arms=1)
+
+test_arm = Parall_Arm_model(tspan,x0,dev,n_arms=1)
 test_actions = torch.unsqueeze(agent.test_actions(),0).detach()
 
 t_t, t_y = test_arm.perform_reaching(t_step,test_actions)

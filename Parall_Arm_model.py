@@ -8,9 +8,10 @@ import torch
 
 class Parall_Arm_model:
 
-    def __init__(self,tspan, n_arms=10, height=1.8, mass=80,x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]):
+    def __init__(self,tspan,x0,dev, n_arms=10, height=1.8, mass=80):
 
-
+        self.dev = dev
+        #self.dev = torch.device('cpu')
         # Simulation parameters
         self.tspan = tspan
         self.n_arms = n_arms
@@ -18,7 +19,7 @@ class Parall_Arm_model:
         #self.x0 = torch.Tensor(x0).expand(self.n_arms,-1,-1) # -1 leaves dim unchaged, for 1d tensor, always use expand instead of repeat
 
         #I fear that by sharing memory location of x0(i.e. with expand()) may get some weird unpredicted error, better not risk it
-        self.x0 = torch.Tensor(x0).repeat(self.n_arms, 1, 1)
+        self.x0 = torch.Tensor(x0).repeat(self.n_arms, 1, 1).to(self.dev)
 
         # Mass and height of ppt
         self.M = mass
@@ -43,15 +44,16 @@ class Parall_Arm_model:
         self.alpha = m1 * lc1**2 + I1 + m2 * lc2**2 + I2 + m2* self.l1**2
         self.omega = 2 * m2 * self.l1 * lc2
 
-        M22 = torch.Tensor([m2 * lc2 ** 2 + I2])
+        M22 = torch.Tensor([m2 * lc2 ** 2 + I2]).to(self.dev)
         self.M22 = M22.repeat(self.n_arms,1)
 
+        self.C22 = torch.Tensor([[0]]).expand(self.n_arms, 1).to(self.dev)
 
         self.beta = m2 * lc2**2 + I2
         self.delta = m2 * self.l1 * lc2
 
         np.random.seed(1)
-        self.F = torch.Tensor(np.random.rand(2,2)).repeat(n_arms,1,1) # repeat in first dimension given n of arms
+        self.F = torch.Tensor(np.random.rand(2,2)).repeat(n_arms,1,1).to(self.dev) # repeat in first dimension given n of arms
 
 
 
@@ -76,7 +78,8 @@ class Parall_Arm_model:
         C12 = torch.mul(- d_theta2, c)
         C21 = torch.mul(d_theta1, c)
 
-        return torch.cat([C11, C12, C21, torch.Tensor([[0]]).expand(self.n_arms,1)],dim=1).reshape(-1,2,2)
+
+        return torch.cat([C11, C12, C21, self.C22],dim=1).reshape(-1,2,2)
 
 
 
@@ -110,7 +113,7 @@ class Parall_Arm_model:
 
         t_ = None # pass empty t as not used by the system
         y = []
-        c_y = self.x0.clone() # need to detach ?
+        c_y = self.x0.clone() # need to detach ? No if you wanna differentiate through RK
         c_t = 0
         t = []
         t.append(c_t)
@@ -165,8 +168,8 @@ class Parall_Arm_model:
     def convert_coord(self, theta1, theta2):
 
         t1_t2 = theta1 + theta2
-        x = self.l1 * np.cos(theta1) + self.l2 * np.cos(t1_t2)
-        y = self.l1 * np.sin(theta1) + self.l2 * np.sin(t1_t2)
+        x = self.l1 * torch.cos(theta1) + self.l2 * torch.cos(t1_t2)
+        y = self.l1 * torch.sin(theta1) + self.l2 * torch.sin(t1_t2)
 
         return [x, y]
 

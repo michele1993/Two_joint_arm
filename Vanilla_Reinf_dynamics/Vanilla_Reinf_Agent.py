@@ -9,13 +9,16 @@ from torch.distributions import Normal
 class Reinf_Agent(nn.Module): # inherit for easier managing of trainable parameters
 
 
-    def __init__(self,n,n_arms=1, std = 10, ln_rate= 10, discount = 0.95):
+    def __init__(self,n,dev,n_arms=1, std = 10, ln_rate= 10, discount = 0.95):
 
         super().__init__()
+
+        self.dev = dev
+        #self.dev = torch.device('cpu')
         self.n_arms = n_arms
         self.discount = discount
         self.std = std
-        self.mu_s = nn.Parameter(torch.randn(n,2) *10) # initalise means randomly
+        self.mu_s = nn.Parameter(torch.randn(n,2).to(self.dev) *10) # initalise means randomly
         self.optimiser = opt.Adam(self.parameters(),ln_rate)
 
 
@@ -58,7 +61,7 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
     # Note: this type of rwd f() may not work for the current problem, the Matlab rwd f() may be a better option
     # due to the rwd being negative and at the final step only and the rest being zero, thus if apply backward discounting
     # initial actions returns will be smaller (thus better) than final actions
-    def compute_standard_returns(self,rwd): # compute the correct discounted rwd
+    def compute_discounted_returns(self,rwd): # compute the correct discounted rwd
 
         rwds = torch.Tensor(rwd).repeat(len((self.mu_s)))
 
@@ -73,7 +76,7 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
 
     def forward_dis_return(self,rwd ): # forward discounting, like in matlab the closer an a to rwd the more discounted (since rwd is negative)
 
-        n = torch.Tensor(range(len(self.mu_s)))
+        n = torch.Tensor(range(len(self.mu_s))).to(self.dev)
 
         return rwd * self.discount**n
 
