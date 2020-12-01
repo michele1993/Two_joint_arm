@@ -14,7 +14,6 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
         super().__init__()
 
         self.dev = dev
-        #self.dev = torch.device('cpu')
         self.n_arms = n_arms
         self.discount = discount
         self.std = std

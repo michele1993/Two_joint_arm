@@ -11,7 +11,6 @@ class Parall_Arm_model:
     def __init__(self,tspan,x0,dev, n_arms=10, height=1.8, mass=80):
 
         self.dev = dev
-        #self.dev = torch.device('cpu')
         # Simulation parameters
         self.tspan = tspan
         self.n_arms = n_arms

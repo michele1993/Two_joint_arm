@@ -12,6 +12,7 @@ t_print = 50
 n_arms = 5000
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
 dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+#dev = torch.device('cpu')
 
 # Target endpoint, based on matlab - reach straight in front, at shoulder height
 x_hat = 0.792
