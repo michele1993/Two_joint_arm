@@ -7,7 +7,7 @@ class Video_arm:
 
     def __init__(self, arm, thetas,t,fps = 20):
 
-
+        #plt.rcParams['animation.ffmpeg_path'] = '~/anaconda3/bin/ffmpeg'
         self.arm = arm
         self.thetas = thetas
         self.t = t

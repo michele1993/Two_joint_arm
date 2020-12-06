@@ -160,6 +160,21 @@ class Parall_Arm_model:
 
         return torch.sqrt((y_hat - y_c)**2 + (x_hat - x_c)**2)
 
+    def compute_vel(self,y):
+
+        t1 = y[-1:, :,0]
+        t2 = y[-1:, :,1]
+        dt1 = y[-1:, :,2]
+        dt2 = y[-1:, :,3]
+
+
+        dx = - self.l1 * torch.sin(t1) * dt1 - self.l2 * (dt1+dt2) * torch.sin((t1+t2 ))
+        dy = self.l1 * torch.cos(t1) * dt1 + self.l2 * (dt1 + dt2) * torch.cos((t1 + t2))
+
+
+        return torch.sqrt(dx**2 + dy**2)
+
+
 
 
     # The following methods are useful for computing features of the arm (e.g. position, velocity etc.)

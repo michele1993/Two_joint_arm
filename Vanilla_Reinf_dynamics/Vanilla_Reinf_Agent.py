@@ -29,15 +29,11 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
         d = Normal(self.mu_s, self.std)
 
         sampled_as = d.sample((self.n_arms,))
-
-
         self.log_ps = d.log_prob(sampled_as)
-
 
         # sampled_as = self.gaussian_convol(torch.transpose(sampled_as,1,2))
         # print(sampled_as.size())
         # exit()
-
 
         return torch.transpose(sampled_as,1,2) # sampled_as.reshape(-1,2,1) # transpose the 2nd and 3rd dimensior to make it fit RK4 and dynamical system, batchx2xn_steps
 
