@@ -82,7 +82,7 @@ class Parall_Arm_model:
 
 
 
-    def dynamical_system(self,t,y,u): # create equivalent 1st order dynamical system of equations to be passed to solve_ivp
+    def dynamical_system(self,y,u): # create equivalent 1st order dynamical system of equations to be passed to solve_ivp
 
         inv_MM = self.inverse_M(y[:,1])
 
@@ -110,7 +110,6 @@ class Parall_Arm_model:
 
         n_iterations = int((self.tspan[1] - self.tspan[0]) / t_step)
 
-        t_ = None # pass empty t as not used by the system
         y = []
         c_y = self.x0.clone() # need to detach ? No if you wanna differentiate through RK
         c_t = 0
@@ -124,21 +123,21 @@ class Parall_Arm_model:
 
             # Compute 4 different slopes to perfom the update
 
-            k1 = self.dynamical_system(t_,c_y,u[:,:,it:it+1]) # use it:it+1 to keep the dim of original tensor without slicing
+            k1 = self.dynamical_system(c_y,u[:,:,it:it+1]) # use it:it+1 to keep the dim of original tensor without slicing it
 
             n_y = c_y + (k1 * t_step/2)
 
-            k2 = self.dynamical_system(t_, n_y,u[:,:,it:it+1])
+            k2 = self.dynamical_system( n_y,u[:,:,it:it+1])
 
             n_y = c_y + (k2 * t_step / 2)
 
-            k3 = self.dynamical_system(t_, n_y, u[:,:,it:it+1])
+            k3 = self.dynamical_system( n_y, u[:,:,it:it+1])
 
             n_y = c_y + (k3 * t_step)
 
-            k4 = self.dynamical_system(t_, n_y, u[:,:,it:it+1])
+            k4 = self.dynamical_system( n_y, u[:,:,it:it+1])
 
-            c_y += t_step * (1/6) * (k1 + 2*k2 + 2*k3 + k4)
+            c_y += t_step * (1/6) * (k1 + 2*k2 + 2*k3 + k4) # use w_average of the for slope to compute a slope from initial point
 
             c_t += t_step
 
@@ -151,29 +150,24 @@ class Parall_Arm_model:
 
 
 
-    def compute_rwd(self,y, x_hat,y_hat): # based on average distance of last five points from target
+    def compute_rwd(self,y, x_hat,y_hat, f_points): # based on average distance of last five points from target
 
+        #[x_c, y_c] = self.convert_coord(y[-1:, :,0], y[-1:,:, 1])
+        [x_c, y_c] = self.convert_coord(y[-f_points:, :, 0], y[-f_points:, :, 1])
 
-        [x_c, y_c] = self.convert_coord(y[-1:, :,0], y[-1:,:, 1])#self.convert_coord(y[-5:, 0], y[-5:, 1])
+        return torch.mean(torch.sqrt((y_hat - y_c)**2 + (x_hat - x_c)**2),dim=0,keepdim=True) # maintain original dimension for product with log_p
 
+    def compute_vel(self,y, f_points):
 
-
-        return torch.sqrt((y_hat - y_c)**2 + (x_hat - x_c)**2)
-
-    def compute_vel(self,y):
-
-        t1 = y[-1:, :,0]
-        t2 = y[-1:, :,1]
-        dt1 = y[-1:, :,2]
-        dt2 = y[-1:, :,3]
-
+        t1 = y[-f_points:, :,0] # [-1:,
+        t2 = y[-f_points:, :,1] # [-1:,
+        dt1 = y[-f_points:, :,2] # [-1:,
+        dt2 = y[-f_points:, :,3] # [-1:,
 
         dx = - self.l1 * torch.sin(t1) * dt1 - self.l2 * (dt1+dt2) * torch.sin((t1+t2 ))
         dy = self.l1 * torch.cos(t1) * dt1 + self.l2 * (dt1 + dt2) * torch.cos((t1 + t2))
 
-
-        return torch.sqrt(dx**2 + dy**2)
-
+        return torch.mean(torch.sqrt(dx**2 + dy**2),dim=0,keepdim=True) # maintain original dimension to sum with rwd
 
 
 
