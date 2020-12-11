@@ -32,8 +32,6 @@ agent = Reinf_Agent(n_parametrised_steps,dev,n_arms= n_arms).to(dev)
 
 avr_rwd = 0
 avr_vel = 0
-#avr_tau = 0
-
 alpha =  0.01
 
 
@@ -47,12 +45,6 @@ for ep in range(episodes):
 
     rwd = training_arm.compute_rwd(thetas,x_hat,y_hat, f_points)
     velocity = training_arm.compute_vel(thetas, f_points)
-
-    # TRY : compute aver tau and min that,though not sure it will work, not clear the relationship between tau and angular acceleration
-    #tau = (torch.abs(thetas[-1:,:,4]) + torch.abs(thetas[-1:,:,5]))/2
-    #tau_adv = tau - avr_tau
-    #avr_tau += alpha * (tau - avr_tau)
-
 
     advantage = rwd - avr_rwd
     avr_rwd += alpha * (rwd - avr_rwd)
@@ -70,7 +62,7 @@ for ep in range(episodes):
         print("episode: ", ep)
         print("training accuracy: ",torch.mean(avr_rwd))
         print("training velocity: ", torch.mean(avr_vel))
-        #print("training tau: ", torch.mean(avr_tau), '\n')
+
 
 
         # if dev.type == 'cuda':
@@ -98,15 +90,9 @@ torch.save(test_actions, 'Results/test_actions1_av_5points.pt')
 tst_accuracy = test_arm.compute_rwd(t_y,x_hat,y_hat,f_points+1)
 tst_velocity = test_arm.compute_vel(t_y, f_points+1)
 
-#tst_tau = (torch.abs(t_y[-1:,:,4]) + torch.abs(t_y[-1:,:,5]))/2
+
 
 print("Test accuracy: ",tst_accuracy)
 print("Test velocity", tst_velocity)
-#print("Test tau", tst_tau)
 
 
-
-#video1 = Video_arm(test_arm, np.squeeze(t_y.numpy()), np.array(t_t),fps = 60)
-#video1.make_video()
-
-        #print(agent.mu_s)
