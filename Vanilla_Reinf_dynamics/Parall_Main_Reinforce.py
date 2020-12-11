@@ -5,26 +5,26 @@ import torch
 import numpy as np
 
 
+dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+#dev = torch.device('cpu')
+
+
 episodes = 1
 n_RK_steps = 100
-n_parametrised_steps = n_RK_steps
+#time_window_steps = 10
+n_parametrised_steps = n_RK_steps #- time_window_steps
 t_print = 50
 n_arms = 5000
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
-t_step = tspan[-1]/n_RK_steps
-f_points = 5 # number of final points to average across for distance to target and velocity
+t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
+f_points = 5 #[- time_window_steps, -1] # number of final points to average across for distance to target and velocity
 vel_weight = 0.8
 
-dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-#dev = torch.device('cpu')
 
 # Target endpoint, based on matlab - reach straight in front, at shoulder height
 x_hat = 0.792
 y_hat = 0
-
-
-
 
 training_arm = Parall_Arm_model(tspan,x0,dev, n_arms=n_arms)
 agent = Reinf_Agent(n_parametrised_steps,dev,n_arms= n_arms).to(dev)
@@ -33,8 +33,6 @@ agent = Reinf_Agent(n_parametrised_steps,dev,n_arms= n_arms).to(dev)
 avr_rwd = 0
 avr_vel = 0
 alpha =  0.01
-
-
 
 
 for ep in range(episodes):
