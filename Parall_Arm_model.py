@@ -153,21 +153,21 @@ class Parall_Arm_model:
     def compute_rwd(self,y, x_hat,y_hat, f_points): # based on average distance of last five points from target
 
         #[x_c, y_c] = self.convert_coord(y[-1:, :,0], y[-1:,:, 1])
-        [x_c, y_c] = self.convert_coord(y[-f_points:, :, 0], y[-f_points:, :, 1])
+        [x_c, y_c] = self.convert_coord(y[f_points:, :, 0], y[f_points:, :, 1])
 
-        return torch.mean(torch.sqrt((y_hat - y_c)**2 + (x_hat - x_c)**2),dim=0,keepdim=True) # maintain original dimension for product with log_p
+        return torch.mean((y_hat - y_c)**2 + (x_hat - x_c)**2,dim=0,keepdim=True) #torch.sqrt()# maintain original dimension for product with log_p
 
     def compute_vel(self,y, f_points):
 
-        t1 = y[-f_points:, :,0] # [-1:,
-        t2 = y[-f_points:, :,1] # [-1:,
-        dt1 = y[-f_points:, :,2] # [-1:,
-        dt2 = y[-f_points:, :,3] # [-1:,
+        t1 = y[f_points:, :,0] # [-1:,
+        t2 = y[f_points:, :,1] # [-1:,
+        dt1 = y[f_points:, :,2] # [-1:,
+        dt2 = y[f_points:, :,3] # [-1:,
 
         dx = - self.l1 * torch.sin(t1) * dt1 - self.l2 * (dt1+dt2) * torch.sin((t1+t2 ))
         dy = self.l1 * torch.cos(t1) * dt1 + self.l2 * (dt1 + dt2) * torch.cos((t1 + t2))
 
-        return torch.mean(torch.sqrt(dx**2 + dy**2),dim=0,keepdim=True) # maintain original dimension to sum with rwd
+        return torch.mean(dx**2 + dy**2,dim=0,keepdim=True) #torch.sqrt() # maintain original dimension to sum with rwd
 
 
 

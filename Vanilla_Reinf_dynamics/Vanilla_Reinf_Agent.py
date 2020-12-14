@@ -31,11 +31,11 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
         sampled_as = d.sample((self.n_arms,))
         self.log_ps = d.log_prob(sampled_as)
 
-        # sampled_as = self.gaussian_convol(torch.transpose(sampled_as,1,2))
+        sampled_as = self.gaussian_convol(torch.transpose(sampled_as,1,2))
         # print(sampled_as.size())
         # exit()
 
-        return torch.transpose(sampled_as,1,2) # sampled_as.reshape(-1,2,1) # transpose the 2nd and 3rd dimensior to make it fit RK4 and dynamical system, batchx2xn_steps
+        return sampled_as #torch.transpose(sampled_as,1,2) # transpose the 2nd and 3rd dimensior to make it fit RK4 and dynamical system, batchx2xn_steps
 
 
     def update(self, dis_rwd):
@@ -83,9 +83,9 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
 
         kernel = torch.FloatTensor([[[0.006, 0.061, 0.242, 0.383, 0.242, 0.061,0.006]]])
 
-        actions[:,0,:] =  nn.functional.conv1d(actions[:,0:1,:], kernel,padding=(kernel.size()[-1]-1)//2)
+        actions[:,0:1,:] =  nn.functional.conv1d(actions[:,0:1,:], kernel,padding=(kernel.size()[-1]-1)//2)
 
-        actions[:,1,:] =  nn.functional.conv1d(actions[:,1:2,:], kernel,padding=(kernel.size()[-1]-1)//2)
+        actions[:,1:2,:] =  nn.functional.conv1d(actions[:,1:2,:], kernel,padding=(kernel.size()[-1]-1)//2)
 
         return actions
     # MAY WANT TO INCLUDE BASELINE!
