@@ -1,5 +1,5 @@
 from Parall_Arm_model import Parall_Arm_model
-from Vanilla_Reinf_dynamics.Vanilla_Reinf_Agent import Reinf_Agent
+from Vanilla_Reinf_dynamics.FeedForward.Vanilla_Reinf_Agent import Reinf_Agent
 import torch
 #from safety_checks.Video_arm_config import Video_arm
 import numpy as np
@@ -12,7 +12,7 @@ dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 episodes = 15000
 n_RK_steps = 100
-time_window_steps = 20
+time_window_steps = 25
 n_parametrised_steps = n_RK_steps - time_window_steps
 t_print = 50
 n_arms = 5000
@@ -89,7 +89,7 @@ test_actions = torch.unsqueeze(agent.test_actions(),0).detach()
 zero_actions = torch.zeros(1,2,time_window_steps).to(dev)
 test_actions = torch.cat([test_actions,zero_actions],dim=2)
 
-torch.save(test_actions, 'Results/test_actions1_av_vel_20points.pt')
+torch.save(test_actions, '../Results/test_actions2_Viscosity_av_vel_20points.pt')
 
 agent.gaussian_convol(test_actions)
 # add some zero input for extra time
@@ -98,7 +98,7 @@ agent.gaussian_convol(test_actions)
 t_t, t_y = test_arm.perform_reaching(t_step,test_actions)
 
 
-torch.save(t_y, 'Results/test_dynamics1_av_vel_20pointsl.pt')
+torch.save(t_y, '../Results/test_dynamics2_Viscosity_av_vel_20points.pt')
 
 
 tst_accuracy = test_arm.compute_rwd(t_y,x_hat,y_hat,f_points)
@@ -106,7 +106,7 @@ tst_velocity = test_arm.compute_vel(t_y, f_points)
 
 
 
-print("Test accuracy: ",tst_accuracy)
-print("Test velocity", tst_velocity)
+print("Test accuracy: ",torch.sqrt(tst_accuracy))
+print("Test velocity", torch.sqrt(tst_velocity))
 
 

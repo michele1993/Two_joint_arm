@@ -1,5 +1,5 @@
 from Arm_model import Arm_model
-from Vanilla_Reinf_dynamics.Vanilla_Reinf_Agent import Reinf_Agent
+from Vanilla_Reinf_dynamics.FeedForward.Vanilla_Reinf_Agent import Reinf_Agent
 import numpy as np
 import torch
 

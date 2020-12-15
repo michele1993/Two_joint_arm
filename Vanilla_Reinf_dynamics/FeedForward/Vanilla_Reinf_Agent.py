@@ -9,7 +9,7 @@ from torch.distributions import Normal
 class Reinf_Agent(nn.Module): # inherit for easier managing of trainable parameters
 
 
-    def __init__(self,n,dev,n_arms=1, std = 10, ln_rate= 10, discount = 0.95):
+    def __init__(self,n,dev,n_arms=1, std = 10, ln_rate= 100, discount = 0.95):
 
         super().__init__()
 
@@ -81,7 +81,7 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
 
     def gaussian_convol(self,actions):
 
-        kernel = torch.FloatTensor([[[0.006, 0.061, 0.242, 0.383, 0.242, 0.061,0.006]]])
+        kernel = torch.FloatTensor([[[0.006, 0.061, 0.242, 0.383, 0.242, 0.061,0.006]]]).to(self.dev)
 
         actions[:,0:1,:] =  nn.functional.conv1d(actions[:,0:1,:], kernel,padding=(kernel.size()[-1]-1)//2)
 
