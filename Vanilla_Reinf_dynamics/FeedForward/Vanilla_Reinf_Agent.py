@@ -9,7 +9,7 @@ from torch.distributions import Normal
 class Reinf_Agent(nn.Module): # inherit for easier managing of trainable parameters
 
 
-    def __init__(self,n,dev,n_arms=1, std = 10, ln_rate= 100, discount = 0.95):
+    def __init__(self,n,dev,n_arms=1, std = 1, ln_rate= 0.01, discount = 0.95):
 
         super().__init__()
 
@@ -17,7 +17,7 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
         self.n_arms = n_arms
         self.discount = discount
         self.std = std
-        self.mu_s = nn.Parameter(torch.randn(n,2).to(self.dev) *10) # initalise means randomly
+        self.mu_s = nn.Parameter(torch.randn(n,2).to(self.dev) ) # initalise means randomly
         self.optimiser = opt.Adam(self.parameters(),ln_rate)
 
 
@@ -31,6 +31,8 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
         sampled_as = d.sample((self.n_arms,))
         self.log_ps = d.log_prob(sampled_as)
 
+        sampled_as = torch.clip_(sampled_as,-2,2)
+
         sampled_as = self.gaussian_convol(torch.transpose(sampled_as,1,2))
         # print(sampled_as.size())
         # exit()
@@ -39,6 +41,7 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
 
 
     def update(self, dis_rwd):
+
 
         loss = torch.sum(self.log_ps * dis_rwd.reshape(-1,1,1))# dis_rwd.reshape(-1,1) #.mean() # check that product is element-wise, may need log_ps.view(-1)
 

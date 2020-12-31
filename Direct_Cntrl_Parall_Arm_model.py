@@ -6,7 +6,7 @@ import torch
 
 
 
-class FB_Par_Arm_model:
+class Direct_Pl_Arm_model:
 
     def __init__(self,tspan,x0,dev, n_arms=10, height=1.8, mass=80):
 
@@ -84,19 +84,58 @@ class FB_Par_Arm_model:
 
     def dynamical_system(self,y,u): # create equivalent 1st order dynamical system of equations to be passed to solve_ivp
 
+        if torch.sum(torch.isnan(y)) >0: # check if y contains any nan
+            print('y')
+            exit()
+
         inv_MM = self.inverse_M(y[:,1])
+
+        if torch.sum(torch.isnan(inv_MM)) >0: # check if y contains any nan
+            print('MM')
+            exit()
 
         CC = self.computeC(y[:,1],y[:,2],y[:,3])
 
+        if torch.sum(torch.isnan(CC)) >0: # check if y contains any nan
+            print('CC')
+            exit()
+
         d_thet = y[:,2:4]
 
-        torques = y[:,4:6]
 
-        eq_rhs = torques - CC @ d_thet + self.F @ d_thet
+        eq_rhs = u - CC @ d_thet + self.F @ d_thet
+
+
+
+        if torch.sum(torch.isnan(d_thet)) >0: # check if y contains any nan
+            print('d_thet')
+            exit()
+
+        if torch.sum(torch.isnan(self.F @ d_thet)) >0: # check if y contains any nan
+            print('self.F @ d_thet')
+            print(torch.mean(d_thet))
+            print(torch.mean(self.F))
+            print(torch.mean(u))
+            exit()
+
+        if torch.sum(torch.isnan(CC @ d_thet)) >0: # check if y contains any nan
+            print('CC @ d_thet')
+
+            idx = torch.argmax(d_thet,dim=0)
+            min_id = torch.argmin(d_thet,dim=0)
+
+            print(torch.norm(self.u[idx[0]]))
+            print(torch.norm(self.u[min_id[0]]))
+            print(torch.mean(d_thet))
+            print(torch.mean(CC))
+            print(torch.mean(u))
+            exit()
+
+
 
         d_eq = inv_MM @ eq_rhs
 
-        return torch.cat([d_thet, d_eq, y[:,6:8],u],dim=1)
+        return torch.cat([d_thet, d_eq],dim=1)
 
 
     # if torch.sum(torch.isnan(y)) >0: # check if y contains any nan
@@ -105,70 +144,71 @@ class FB_Par_Arm_model:
     #     exit()
 
 
-
-    def perform_reaching(self, t_step,agent,train):
+    def perform_reaching(self, t_step,u):
 
         n_iterations = int((self.tspan[1] - self.tspan[0]) / t_step)
 
         y = []
         c_y = self.x0.clone() # need to detach ? No if you wanna differentiate through RK
-        u_values = []
 
-
+        self.u = u
         for it in range(n_iterations):
-
-            u = agent(c_y,train)
-            u_values.append(u)
 
             y.append(c_y.detach().clone()) # store intermediate values, but without keeping track of gradient for each
 
             # Compute 4 different slopes to perfom the update
 
-            k1 = self.dynamical_system(c_y,u) # use it:it+1 to keep the dim of original tensor without slicing it
+            #print("1")
+            k1 = self.dynamical_system(c_y,u[:,:,it:it+1]) # use it:it+1 to keep the dim of original tensor without slicing it
 
             n_y = c_y + (k1 * t_step/2)
 
-            k2 = self.dynamical_system( n_y,u)
+            #print("2")
+            k2 = self.dynamical_system( n_y,u[:,:,it:it+1])
 
             n_y = c_y + (k2 * t_step / 2)
 
-            k3 = self.dynamical_system( n_y, u)
+            #print("3")
+            k3 = self.dynamical_system( n_y, u[:,:,it:it+1])
+
+            # if torch.sum(torch.isnan(k3)) > 0:  # check if y contains any nan
+            #     print('k3')
+            #     exit()
+            #
+            # if torch.sum(torch.isnan(c_y)) > 0:  # check if y contains any nan
+            #         print('c_y')
+            #         exit()
 
             n_y = c_y + (k3 * t_step)
 
-            k4 = self.dynamical_system( n_y, u)
+            # if torch.sum(torch.isnan(n_y)) > 0:  # check if y contains any nan
+            #     print('n_y')
+            #     exit()
+            # print("4")
+
+            k4 = self.dynamical_system( n_y, u[:,:,it:it+1])
+
+            # if torch.sum(torch.isnan(k4)) > 0:  # check if y contains any nan
+            #     print('k4')
+            #     exit()
+
 
             c_y += t_step * (1/6) * (k1 + 2*k2 + 2*k3 + k4) # use w_average of the for slope to compute a slope from initial point
 
 
         y.append(c_y) # store final locations, which contains backward gradient, through all previous points
 
-        return torch.stack(y), torch.stack(u_values)
+        return torch.stack(y)
 
 
 
 
-    def compute_rwd(self,y, t1_hat,t2_hat): # based on average distance of last five points from target
+    def compute_rwd(self,y, x_hat,y_hat, f_points): # based on average distance of last five points from target
 
-        # Based on the openAI inverted pendulum
-
-        t1 = (t1_hat - y[1:,:,0])**2 # don't take first value since based on initial cond
-
-        # NEED TO SOME TWO ANGLES FOR SECOND TORQUE ?
-        t2 = (t2_hat - y[1:, :, 1]) ** 2 # don't take first value since based on initial cond
-
-        dt1 = y[1:, :, 2] ** 2 # don't take first value since based on initial cond
-        dt2 = y[1:, :, 3] ** 2 # don't take first value since based on initial cond
-
-        return t1 + t2 + 0.1*(dt1+dt2)
-
-    def compute_distance(self,y, x_hat,y_hat,f_points): # based on average distance of last five points from target
-
+        #[x_c, y_c] = self.convert_coord(y[-1:, :,0], y[-1:,:, 1])
         [x_c, y_c] = self.convert_coord(y[f_points:, :, 0], y[f_points:, :, 1])
 
-        return torch.mean((y_hat - y_c)**2 + (x_hat - x_c)**2,dim=0,keepdim=True)
-
-
+        return torch.mean((y_hat - y_c)**2 + (x_hat - x_c)**2,dim=0,keepdim=True) #torch.sqrt()# maintain original dimension for product with log_p
 
     def compute_vel(self,y, f_points):
 
@@ -180,7 +220,7 @@ class FB_Par_Arm_model:
         dx = - self.l1 * torch.sin(t1) * dt1 - self.l2 * (dt1+dt2) * torch.sin((t1+t2 ))
         dy = self.l1 * torch.cos(t1) * dt1 + self.l2 * (dt1 + dt2) * torch.cos((t1 + t2))
 
-        return torch.mean(dx**2 + dy**2, dim=0,keepdim=True)
+        return torch.mean(dx**2 + dy**2,dim=0,keepdim=True) #torch.sqrt() # maintain original dimension to sum with rwd
 
 
 

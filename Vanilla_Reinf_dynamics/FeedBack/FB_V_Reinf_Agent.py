@@ -10,12 +10,13 @@ from torch.distributions import Normal
 class FB_Reinf_Agent(nn.Module): # inherit for easier managing of trainable parameters
 
 
-    def __init__(self,dev,input_size = 6, n_hiddens = 128,n_outputs = 2, std = 10, ln_rate= 0.1):
+    def __init__(self,dev,input_size = 6, n_hiddens = 128,n_outputs = 2, std = 1, ln_rate= 0.05, discount = 0.95):
 
         super().__init__()
 
         self.dev = dev
         self.std = std
+        self.discount = discount
 
         self.l1 = nn.Linear(input_size,n_hiddens)
         self.l2 = nn.Linear(n_hiddens,n_outputs)
@@ -56,6 +57,7 @@ class FB_Reinf_Agent(nn.Module): # inherit for easier managing of trainable para
     def update(self, rwd):
 
         log_ps = torch.stack(self.store_logs)
+
         self.store_logs = []
 
         loss = torch.sum(log_ps * rwd)
@@ -73,11 +75,12 @@ class FB_Reinf_Agent(nn.Module): # inherit for easier managing of trainable para
     # Note: this type of rwd f() may not work for the current problem, the Matlab rwd f() may be a better option
     # due to the rwd being negative and at the final step only and the rest being zero, thus if apply backward discounting
     # initial actions returns will be smaller (thus better) than final actions
-    def compute_discounted_returns(self,rwd): # compute the correct discounted rwd
+    def compute_discounted_returns(self,rwd,steps): # compute the correct discounted rwd
 
-        rwds = torch.Tensor(rwd).repeat(len((self.mu_s)))
 
-        discounts = self.discount ** (torch.FloatTensor(range(len(rwds))))
+        rwds = torch.Tensor(rwd).repeat(steps).to(self.dev)
+
+        discounts = self.discount ** (torch.FloatTensor(range(len(rwds))).to(self.dev))
 
         return torch.flip(torch.cumsum(torch.flip(discounts * rwds, dims=(0,)), dim=0), dims=(0,)) / discounts
         # the first bit flip(cumsum(flip(...))) computes the cumulative sum using the discount from the first state,
@@ -86,9 +89,9 @@ class FB_Reinf_Agent(nn.Module): # inherit for easier managing of trainable para
         # take the discounting out of the sum and applying it at the end for the cumsum for each state (very clever!).
 
 
-    def forward_dis_return(self,rwd ): # forward discounting, like in matlab the closer an a to rwd the more discounted (since rwd is negative)
+    def forward_dis_return(self,rwd,steps ): # forward discounting, like in matlab the closer an a to rwd the more discounted (since rwd is negative)
 
-        n = torch.Tensor(range(len(self.mu_s))).to(self.dev)
+        n = torch.Tensor(range(steps)).to(self.dev)
 
         return rwd * self.discount**n
 
