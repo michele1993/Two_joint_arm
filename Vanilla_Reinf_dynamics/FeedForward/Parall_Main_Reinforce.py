@@ -82,7 +82,7 @@ for ep in range(episodes):
 
 
 
-tst_tspan =tspan #[0, 0.4 + (t_step* f_points)] # extend time of simulation to see if arm bounce back
+tst_tspan = tspan #[0, 0.4 + (t_step* f_points)] # extend time of simulation to see if arm bounce back
 test_arm = Parall_Arm_model(tst_tspan,x0,dev,n_arms=1)
 
 test_actions = torch.unsqueeze(agent.test_actions(),0).detach()

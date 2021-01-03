@@ -6,7 +6,7 @@ import torch
 
 
 
-class Parall_Arm_model:
+class Spvsd_Arm_model:
 
     def __init__(self,tspan,x0,dev, n_arms=10, height=1.8, mass=80):
 
@@ -106,7 +106,7 @@ class Parall_Arm_model:
 
 
 
-    def perform_reaching(self, t_step,u):
+    def perform_reaching(self, t_step,u,str_wind):
 
         n_iterations = int((self.tspan[1] - self.tspan[0]) / t_step)
 
@@ -119,7 +119,11 @@ class Parall_Arm_model:
 
         for it in range(n_iterations):
 
-            y.append(c_y.detach().clone()) # store intermediate values, but without keeping track of gradient for each
+            # store gradient for each output used in the time window
+            if it <= str_wind:
+                y.append(c_y.detach().clone()) # store intermediate values, but without keeping track of gradient for each
+            else:
+                y.append(c_y.clone())
 
             # Compute 4 different slopes, k, for initial point, to perform one-step update according to RK4 implementation
 
@@ -146,7 +150,7 @@ class Parall_Arm_model:
 
         y.append(c_y) # store final locations, which contains backward gradient, through all previous points
 
-        return t, torch.stack(y)
+        return t,torch.stack(y)
 
 
 
@@ -172,7 +176,7 @@ class Parall_Arm_model:
 
     def compute_accel(self, vel, t_step):
 
-        return (vel[1:, :, :] - vel[:-1, :, :]) / t_step
+        return (vel[1:,:,:] - vel[:-1,:,:])/t_step
 
 
     # The following methods are useful for computing features of the arm (e.g. position, velocity etc.)

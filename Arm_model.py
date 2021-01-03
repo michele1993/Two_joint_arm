@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from scipy.integrate import solve_ivp
 
-
+# OUTDATED VERSION! Use: Parall_Arm_model even for single arm, as better coded
 
 
 class Arm_model:
