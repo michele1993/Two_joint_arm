@@ -98,9 +98,11 @@ class Spvsd_Decay_Arm_model:
 
         d_eq = inv_MM @ eq_rhs
 
-        return torch.cat([d_thet - self.decay_w * d_thet, d_eq - self.decay_w * d_eq, y[:,6:8] - self.decay_w * y[:,6:8],u - self.decay_w * u],dim=1)
+        return torch.cat([d_thet, d_eq - self.decay_w * d_eq, y[:,6:8] - self.decay_w * y[:,6:8],u],dim=1)
+        #d_thet - self.decay_w * d_thet,
+        #u - self.decay_w * u
 
-
+    #
     # if torch.sum(torch.isnan(y)) >0: # check if y contains any nan
     #     print('y')
     #     print(y)
@@ -126,6 +128,7 @@ class Spvsd_Decay_Arm_model:
                 y.append(c_y.detach().clone()) # store intermediate values, but without keeping track of gradient for each
             else:
                 y.append(c_y.clone())
+                #self.decay_w = 1
 
             # Compute 4 different slopes, k, for initial point, to perform one-step update according to RK4 implementation
 

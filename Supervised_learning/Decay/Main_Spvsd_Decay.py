@@ -7,7 +7,7 @@ import torch
 # distance and velocity as cost function, with no regularisation or decay.
 
 episodes = 100000
-ln_rate= 50
+ln_rate= 10
 n_RK_steps = 100
 time_window = 10
 n_parametrised_steps = n_RK_steps
@@ -74,10 +74,14 @@ for ep in range(episodes):
         ep_distance = []
         ep_velocity = []
 
+        if av_acc < 0.0005:
+            break
 
 
-torch.save(thetas, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Decay/Results/Supervised_Decay_dynamics2.pt')
-torch.save(actions, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Decay/Results/Supervised_Decay_actions_2.pt')
-torch.save(training_accuracy, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Decay/Results/Supervised_Decay_training_accuracy_2.pt')
-torch.save(training_velocity, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Decay/Results/Supervised_Decay_training_velocity_2.pt')
+
+
+torch.save(thetas, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Decay/Results/Supervised_Decay_dynamics3.pt')
+torch.save(actions, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Decay/Results/Supervised_Decay_actions_3.pt')
+torch.save(training_accuracy, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Decay/Results/Supervised_Decay_training_accuracy_3.pt')
+torch.save(training_velocity, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Decay/Results/Supervised_Decay_training_velocity_3.pt')
 
