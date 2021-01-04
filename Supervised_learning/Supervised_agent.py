@@ -9,7 +9,7 @@ from torch.distributions import Normal
 class S_Agent(nn.Module): # inherit for easier managing of trainable parameters
 
 
-    def __init__(self,n,dev, ln_rate= 1):
+    def __init__(self,n,dev, ln_rate= 50):
 
         super().__init__()
 

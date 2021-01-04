@@ -7,6 +7,7 @@ import torch
 # distance and velocity as cost function plus regularising a pair of variables
 
 episodes = 50000
+ln_rate = 1
 n_RK_steps = 100
 time_window = 10
 n_parametrised_steps = n_RK_steps
@@ -24,14 +25,14 @@ y_hat = 0
 dev = torch.device('cpu')
 
 arm = Spvsd_Arm_model(tspan,x0,dev, n_arms=1)
-agent = S_Agent(n_parametrised_steps, dev)
+agent = S_Agent(n_parametrised_steps, dev, ln_rate= ln_rate)
 
 ep_distance = []
 ep_velocity = []
 
 velocity_weight = 0.8
-regl_thor_weight = 0#0.005
-regl_u_weight = 0#0.00005
+regl_thor_weight = 0
+regl_u_weight = 0.00005
 
 
 training_accuracy= []
@@ -51,13 +52,13 @@ for ep in range(episodes):
     sqrd_dx, sqrd_dy = arm.compute_vel(thetas,f_points)
     velocity = torch.mean(sqrd_dx + sqrd_dy,dim=0,keepdim=True)
 
-    #thor1 = torch.norm(thetas[:,:,4])
-    #thor2 = torch.norm(thetas[:, :, 5])
-    #thors = thor1 + thor2
+    thor1 = torch.norm(thetas[:,:,4])
+    thor2 = torch.norm(thetas[:, :, 5])
+    thors = thor1 + thor2
 
-    #u = torch.norm(actions[:,0:1,:]) + torch.norm(actions[:,1:2,:])
+    u = torch.norm(actions[:,0:1,:]) + torch.norm(actions[:,1:2,:])
 
-    loss = distance + (velocity * velocity_weight) #+ (regl_thor_weight * thors) + (regl_u_weight * u)
+    loss = distance + (velocity * velocity_weight) + (regl_thor_weight * thors) + (regl_u_weight * u)
 
     agent.update(loss)
 
@@ -77,17 +78,17 @@ for ep in range(episodes):
         print("ep: ",ep)
         print("distance: ",av_acc)
         print("velocity: ",av_vel)
-        #print("Thors: ",regl_thor_weight * thors)
-        #print("u: ", (regl_u_weight * u), '\n')
+        print("Thors: ",regl_thor_weight * thors)
+        print("u: ", (regl_u_weight * u), '\n')
         ep_distance = []
         ep_velocity = []
 
 
 
-torch.save(thetas, '/Supervised_learning/Standard/Results/Supervised_Basic_final_dynamics2.pt')
-torch.save(actions, '/Supervised_learning/Standard/Results/Supervised_Basic_final_actions_2.pt')
-torch.save(training_accuracy, '/Supervised_learning/Standard/Results/Supervised_Basic_training_accuracy_2.pt')
-torch.save(training_velocity, '/Supervised_learning/Standard/Results/Supervised_Basic_training_velocity_2.pt')
+torch.save(thetas, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Regularised/Results/Supervised_Regularised_dynamics1.pt')
+torch.save(actions, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Regularised/Results/Supervised_Regularised_actions_1.pt')
+torch.save(training_accuracy, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Regularised/Results/Supervised_Regularised_training_accuracy_1.pt')
+torch.save(training_velocity, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Regularised/Results/Supervised_Regularised_training_velocity_1.pt')
 
 
 

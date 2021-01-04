@@ -1,4 +1,4 @@
-from Supervised_learning.Supervised_Arm_Model import Spvsd_Arm_model
+from Supervised_learning.Decay.Spvsd_Decay_Arm_Model import Spvsd_Decay_Arm_model
 from Supervised_learning.Supervised_agent import S_Agent
 import numpy as np
 import torch
@@ -6,7 +6,8 @@ import torch
 #Perform supervised learning using the first attempted approach, namely, using the dynamical model as provided by Berret et al. and using the
 # distance and velocity as cost function, with no regularisation or decay.
 
-episodes = 50000
+episodes = 100000
+ln_rate= 50
 n_RK_steps = 100
 time_window = 10
 n_parametrised_steps = n_RK_steps
@@ -16,6 +17,7 @@ x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial conditi
 t_step = tspan[-1]/n_RK_steps
 f_points = -time_window
 strt_window = n_RK_steps - time_window
+decay_w = 0.6
 
 # Target endpoint, based on matlab - reach strainght in fron at shoulder height
 x_hat = 0.792
@@ -23,8 +25,8 @@ y_hat = 0
 #dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 dev = torch.device('cpu')
 
-arm = Spvsd_Arm_model(tspan,x0,dev, n_arms=1)
-agent = S_Agent(n_parametrised_steps, dev)
+arm = Spvsd_Decay_Arm_model(tspan,x0,dev,decay_w, n_arms=1)
+agent = S_Agent(n_parametrised_steps, dev,ln_rate= ln_rate)
 
 ep_distance = []
 ep_velocity = []
@@ -74,7 +76,8 @@ for ep in range(episodes):
 
 
 
-torch.save(thetas, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Standard/Results/Supervised_Basic_final_dynamics3.pt')
-torch.save(actions, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Standard/Results/Supervised_Basic_final_actions_3.pt')
-torch.save(training_accuracy, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Standard/Results/Supervised_Basic_training_accuracy_3.pt')
-torch.save(training_velocity, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Standard/Results/Supervised_Basic_training_velocity_3.pt')
+torch.save(thetas, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Decay/Results/Supervised_Decay_dynamics2.pt')
+torch.save(actions, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Decay/Results/Supervised_Decay_actions_2.pt')
+torch.save(training_accuracy, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Decay/Results/Supervised_Decay_training_accuracy_2.pt')
+torch.save(training_velocity, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Decay/Results/Supervised_Decay_training_velocity_2.pt')
+
