@@ -1,13 +1,12 @@
-from Supervised_learning.Decay.Spvsd_Decay_Arm_Model import Spvsd_Decay_Arm_model
-from Supervised_learning.Supervised_agent import S_Agent
+from Supervised_learning.Feed_Forward.Supervised_Arm_Model import Spvsd_Arm_model
+from Supervised_learning.Feed_Forward.Supervised_agent import S_Agent
 import numpy as np
 import torch
 
 #Perform supervised learning using the first attempted approach, namely, using the dynamical model as provided by Berret et al. and using the
 # distance and velocity as cost function, with no regularisation or decay.
 
-episodes = 100000
-ln_rate= 10
+episodes = 50000
 n_RK_steps = 100
 time_window = 10
 n_parametrised_steps = n_RK_steps
@@ -16,8 +15,7 @@ tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
 t_step = tspan[-1]/n_RK_steps
 f_points = -time_window
-strt_window = n_RK_steps - time_window
-decay_w = 0.6
+#strt_window = n_RK_steps - time_window
 
 # Target endpoint, based on matlab - reach strainght in fron at shoulder height
 x_hat = 0.792
@@ -25,8 +23,8 @@ y_hat = 0
 #dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 dev = torch.device('cpu')
 
-arm = Spvsd_Decay_Arm_model(tspan,x0,dev,decay_w, n_arms=1)
-agent = S_Agent(n_parametrised_steps, dev,ln_rate= ln_rate)
+arm = Spvsd_Arm_model(tspan,x0,dev, n_arms=1)
+agent = S_Agent(n_parametrised_steps, dev)
 
 ep_distance = []
 ep_velocity = []
@@ -40,7 +38,7 @@ for ep in range(episodes):
 
     actions = agent.give_actions()
 
-    t, thetas = arm.perform_reaching(t_step,actions, strt_window)
+    thetas = arm.perform_reaching(t_step,actions)#, strt_window
 
     # NOT SURE GOOD IDEA, maybe better to optim sqrt (i.e. actual distance):
     # Compute squared distance for x and y coord, so that can optimise that and then apply sqrt() to obtain actual distance as a measure of performance
@@ -74,14 +72,11 @@ for ep in range(episodes):
         ep_distance = []
         ep_velocity = []
 
-        if av_acc < 0.0005:
-            break
 
 
-
-
-torch.save(thetas, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Decay/Results/Supervised_Decay_dynamics3.pt')
-torch.save(actions, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Decay/Results/Supervised_Decay_actions_3.pt')
-torch.save(training_accuracy, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Decay/Results/Supervised_Decay_training_accuracy_3.pt')
-torch.save(training_velocity, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Decay/Results/Supervised_Decay_training_velocity_3.pt')
-
+torch.save(thetas, '/Supervised_learning/Feed_Forward/Standard/Results/Supervised_Basic_final_dynamics3.pt')
+torch.save(actions, '/Supervised_learning/Feed_Forward/Standard/Results/Supervised_Basic_final_actions_3.pt')
+torch.save(training_accuracy,
+           '/Supervised_learning/Feed_Forward/Standard/Results/Supervised_Basic_training_accuracy_3.pt')
+torch.save(training_velocity,
+           '/Supervised_learning/Feed_Forward/Standard/Results/Supervised_Basic_training_velocity_3.pt')

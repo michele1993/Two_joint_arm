@@ -89,7 +89,7 @@ test_actions = torch.unsqueeze(agent.test_actions(),0).detach()
 zero_actions = torch.zeros(1,2,time_window_steps).to(dev)
 test_actions = torch.cat([test_actions,zero_actions],dim=2)
 
-torch.save(test_actions, '../Results/test_actions2_Viscosity_av_vel_20points.pt')
+torch.save(test_actions, 'Results/test_actions2_Viscosity_av_vel_20points.pt')
 
 agent.gaussian_convol(test_actions)
 # add some zero input for extra time
@@ -98,7 +98,7 @@ agent.gaussian_convol(test_actions)
 t_t, t_y = test_arm.perform_reaching(t_step,test_actions)
 
 
-torch.save(t_y, '../Results/test_dynamics2_Viscosity_av_vel_20points.pt')
+torch.save(t_y, 'Results/test_dynamics2_Viscosity_av_vel_20points.pt')
 
 
 tst_accuracy = test_arm.compute_rwd(t_y,x_hat,y_hat,f_points)

@@ -1,5 +1,5 @@
-from Supervised_learning.Supervised_Arm_Model import Spvsd_Arm_model
-from Supervised_learning.Supervised_agent import S_Agent
+from Supervised_learning.Feed_Forward.Supervised_Arm_Model import Spvsd_Arm_model
+from Supervised_learning.Feed_Forward.Supervised_agent import S_Agent
 import numpy as np
 import torch
 
@@ -16,7 +16,7 @@ tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
 t_step = tspan[-1]/n_RK_steps
 f_points = -time_window
-strt_window = n_RK_steps - time_window
+
 
 # Target endpoint, based on matlab - reach strainght in fron at shoulder height
 x_hat = 0.792
@@ -42,7 +42,7 @@ for ep in range(episodes):
 
     actions = agent.give_actions()
 
-    t, thetas = arm.perform_reaching(t_step,actions, strt_window)
+    t, thetas = arm.perform_reaching(t_step,actions)
 
     # NOT SURE GOOD IDEA, maybe better to optim sqrt (i.e. actual distance):
     # Compute squared distance for x and y coord, so that can optimise that and then apply sqrt() to obtain actual distance as a measure of performance
@@ -85,10 +85,12 @@ for ep in range(episodes):
 
 
 
-torch.save(thetas, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Regularised/Results/Supervised_Regularised_dynamics1.pt')
-torch.save(actions, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Regularised/Results/Supervised_Regularised_actions_1.pt')
-torch.save(training_accuracy, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Regularised/Results/Supervised_Regularised_training_accuracy_1.pt')
-torch.save(training_velocity, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Regularised/Results/Supervised_Regularised_training_velocity_1.pt')
+torch.save(thetas, '/Supervised_learning/Feed_Forward/Regularised/Results/Supervised_Regularised_dynamics1.pt')
+torch.save(actions, '/Supervised_learning/Feed_Forward/Regularised/Results/Supervised_Regularised_actions_1.pt')
+torch.save(training_accuracy,
+           '/Supervised_learning/Feed_Forward/Regularised/Results/Supervised_Regularised_training_accuracy_1.pt')
+torch.save(training_velocity,
+           '/Supervised_learning/Feed_Forward/Regularised/Results/Supervised_Regularised_training_velocity_1.pt')
 
 
 
