@@ -1,4 +1,5 @@
-from Supervised_learning.Feed_Forward.Decay.Spvsd_Decay_Arm_Model import Spvsd_Decay_Arm_model
+#from Supervised_learning.Feed_Forward.Decay.Spvsd_Decay_Arm_Model import Spvsd_Decay_Arm_model
+from Supervised_learning.Feed_Forward.Decay.Spvsd_Linear_TimeDecay_Arm_Model import Spvsd_LinearDecay_Arm_model
 from Supervised_learning.Feed_Forward.Supervised_agent import S_Agent
 import numpy as np
 import torch
@@ -10,7 +11,7 @@ episodes = 100000
 ln_rate= 10
 n_RK_steps = 100
 time_window = 10
-n_parametrised_steps = n_RK_steps
+n_parametrised_steps = n_RK_steps #- time_window
 t_print = 50
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
@@ -24,7 +25,9 @@ y_hat = 0
 #dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 dev = torch.device('cpu')
 
-arm = Spvsd_Decay_Arm_model(tspan,x0,dev,decay_w, n_arms=1)
+#arm = Spvsd_Decay_Arm_model(tspan,x0,dev,decay_w, n_arms=1)
+
+arm = Spvsd_LinearDecay_Arm_model(tspan,x0,dev,decay_w, n_arms=1)
 agent = S_Agent(n_parametrised_steps, dev,ln_rate= ln_rate)
 
 ep_distance = []
@@ -38,6 +41,8 @@ training_velocity = []
 for ep in range(episodes):
 
     actions = agent.give_actions()
+    #zero_actions = torch.zeros(1, 2, time_window).to(dev)
+    #actions = torch.cat([actions, zero_actions], dim=2)
 
     thetas = arm.perform_reaching(t_step,actions)
 
@@ -72,14 +77,16 @@ for ep in range(episodes):
         ep_distance = []
         ep_velocity = []
 
-        if av_acc <= 0.0002:
+        if av_acc <= 0.00005:
             break
 
 
 
 
-torch.save(thetas, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Results/Supervised_LargeDecay_40_window_dynamics_1.pt')
-torch.save(actions, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Results/Supervised_LargeDecay_40_window_actions_1.pt')
-torch.save(training_accuracy, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Results/Supervised_LargeDecay_40_window_training_accuracy_1.pt')
-torch.save(training_velocity, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Results/Supervised_LargeDecay_40_window_training_velocity_1.pt')
+torch.save(thetas, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Results/Supervised_ExpTDecay_dynamics_No0a.pt')
+torch.save(actions, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Results/Supervised_ExpTDecay_actions_No0a.pt')
+torch.save(training_accuracy,
+           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Results/Supervised_ExpTDecay_training_accuracy_No0a.pt')
+torch.save(training_velocity,
+           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Results/Supervised_ExpTDecay_training_velocity_No0a.pt')
 

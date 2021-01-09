@@ -1,5 +1,6 @@
 from Supervised_learning.Feed_Forward.Decay.Spvsd_Decay_Arm_Model import Spvsd_Decay_Arm_model
 from Supervised_learning.Feed_Forward.Supervised_Arm_Model import Spvsd_Arm_model
+from Supervised_learning.Feed_Forward.Decay.Spvsd_Linear_TimeDecay_Arm_Model import Spvsd_LinearDecay_Arm_model
 from safety_checks.Video_arm_config import Video_arm
 import torch
 import numpy as np
@@ -13,6 +14,10 @@ import matplotlib.pyplot as plt
 
 # Supervised_Large_Decay_1: Ended at ep 10600, decay_w = 10 (fixed), the rest was the same as above
 
+# Supervised_LinearTDecay_1 : Ended at 8000eps ish, reduce decay_w in time linearly with slope = 5, the rest same as above
+
+# Supervsed_ExpTDecay_1: work best, used exp param = 9.037 and zero actions during time window for training  (for time window =10)
+
 # Learning decay data:
 #test_actions = torch.load('/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Learn_Decay/Results/Supervised_Correct_L_Decay_actions_1.pt',map_location=torch.device('cpu')).detach()
 #decay_w  = torch.load('/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Learn_Decay/Results/Supervised_Correct_L_DecayParameter_1.pt',map_location=torch.device('cpu')).detach()
@@ -21,9 +26,9 @@ import matplotlib.pyplot as plt
 
 #Fixed decay actions:
 decay_w = 10
-test_actions = torch.load('/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Results/Supervised_LargeDecay_40_window_actions_1.pt').detach()
-training_acc = torch.load('/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Results/Supervised_LargeDecay_40_window_training_accuracy_1.pt',map_location=torch.device('cpu'))
-training_vel = torch.load('/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Results/Supervised_LargeDecay_40_window_training_velocity_1.pt',map_location=torch.device('cpu'))
+test_actions = torch.load('/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Results/Supervised_ExpTDecay_actions_1.pt').detach()
+training_acc = torch.load('/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Results/Supervised_ExpTDecay_training_accuracy_1.pt',map_location=torch.device('cpu'))
+training_vel = torch.load('/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Results/Supervised_ExpTDecay_training_velocity_1.pt',map_location=torch.device('cpu'))
 
 #Basic actions
 # test_actions = torch.load('/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Standard/Results/Supervised_Basic_final_actions_2.pt').detach()
@@ -35,9 +40,9 @@ dev = torch.device('cpu')
 longer= True
 
 if longer:
-    n_RK_steps = 150
-    tspan = [0, 0.6]
-    n_zero_actions = 50
+    n_RK_steps = 200
+    tspan = [0, 0.8]
+    n_zero_actions =100
     zero_actions = torch.zeros(1, 2, n_zero_actions ).to(dev)
     test_actions = torch.cat([test_actions, zero_actions], dim=2)
 else:
@@ -56,10 +61,11 @@ y_hat = 0
 t = np.linspace(tspan[0],tspan[1],n_RK_steps+1) # np.linspace(0,0.6,151)
 training_steps = np.linspace(1,len(training_acc)-1,len(training_acc)-1)
 
-
+# Use linear time increase on exponential decay
+test_arm = Spvsd_LinearDecay_Arm_model(tspan,x0,dev,decay_w,n_arms=1)
 
 # Use non-learning decay arm model and simply set hyperparam to learnt parameter
-test_arm = Spvsd_Decay_Arm_model(tspan,x0,dev,decay_w,n_arms=1)
+#test_arm = Spvsd_Decay_Arm_model(tspan,x0,dev,decay_w,n_arms=1)
 
 # Basic arm model:
 #test_arm = Spvsd_Arm_model(tspan,x0,dev,n_arms=1)
@@ -151,4 +157,4 @@ ax6.set_xlabel("x50")
 plt.show()
 
 video1 = Video_arm(test_arm,np.squeeze(dynamics.numpy()),t,fps=40)
-video1.make_video()
+#video1.make_video()
