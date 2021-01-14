@@ -4,7 +4,7 @@ from Supervised_learning.Feed_Back.FB_L_Decay.Spvsd_FB_L_Decay_Agent import Spvs
 from Supervised_learning.Feed_Back.FB_L_Decay.Spvsd_FB_L_Decay_Arm_model import FB_L_Arm_model
 
 
-# Regularising thor doesn't work (still get massive deceleration) as well as regularising acceleration, though hvan't played much with
+# Regularising thor doesn't work (still get massive deceleration) as well as regularising acceleration only, though haven't played much with
 # regulariser hyper-param, I guess could try regularising both (thor & acceleration), but maybe painful to tune hyper-params
 
 episodes = 10000
@@ -42,12 +42,11 @@ for ep in range(episodes):
 
     thetas, u_s, e_params = arm.perform_reaching(t_step,agent)
 
-    # NOT SURE GOOD IDEA, maybe better to optim sqrt (i.e. actual distance):
-    # Compute squared distance for x and y coord, so that can optimise that and then apply sqrt() to obtain actual distance as a measure of performance
+    # Compute squared distance for x and y coord, so that can optimise squared velocity
     x_sqrd_dist, y_sqrd_dist = arm.compute_rwd(thetas, x_hat,y_hat, f_points)
     sqrd_distance = torch.mean(x_sqrd_dist + y_sqrd_dist, dim=0, keepdim=True) # mean squared distance from target across window points for optimisation
 
-    sqrd_dx, sqrd_dy = arm.compute_vel(thetas,0) # use 0 to select all values, need all to compute norm of acceleration
+    sqrd_dx, sqrd_dy = arm.compute_vel(thetas,0) # use 0 to select all time values from thetas, need all to compute norm of acceleration across entire reach
 
     # Compute velocity for points in window only, as needed for the optimisation
     window_srd_dx = sqrd_dx[f_points:,:]
@@ -59,10 +58,12 @@ for ep in range(episodes):
     full_velocity = torch.sqrt(sqrd_dx + sqrd_dy)
     acceleration = arm.compute_accel(full_velocity,t_step)
 
-    # Need this, if wanna regularise thor
+    # --------------- Need this, if wanna regularise thor -------------------------------------
     # tor = thetas[:, :, 4:6]
     # thr1_norm = torch.linalg.norm(tor[:,:,0])
     # thr2_norm = torch.linalg.norm(tor[:, :, 1])
+    # --------------------------------------------------------------------------
+
 
     # sum of squared distance and weighted squared velocity
     loss = sqrd_distance + (sqrd_velocity * velocity_weight) + (torch.linalg.norm(acceleration) * accel_weight) # + (thr1_norm + thr2_norm) * thor_weight
@@ -71,6 +72,7 @@ for ep in range(episodes):
     agent.update(loss)
 
     ep_distance.append(torch.mean(torch.sqrt(x_sqrd_dist + y_sqrd_dist)).detach()) # mean distance to assess performance
+    # Take sqrt() of squared velocity to obtain actual velocity
     ep_velocity.append(torch.mean(torch.sqrt(window_srd_dx + window_srd_dy)).detach())
 
 

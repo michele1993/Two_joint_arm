@@ -43,8 +43,8 @@ class Spvsd_FB_L_Agent(nn.Module): # inherit for easier managing of trainable pa
         inpt = F.relu(self.l2(inpt))
         inpt = self.l3(inpt)
 
-        return torch.unsqueeze(inpt[:,0:2],dim=2), torch.clip(inpt[:,2],0, 200)
-        #return torch.unsqueeze(inpt[:,0:2],dim=2), torch.clip(inpt[:,2],0) # need to add third dimension for the dynamical system
+        # need to add third dimension to control signal for the dynamical system
+        return torch.unsqueeze(inpt[:,0:2],dim=2), torch.clip(inpt[:,2],0, 200) # clip time decay value to avoid "breakin" simulator by flipping the sign
 
 
     def update(self, loss):

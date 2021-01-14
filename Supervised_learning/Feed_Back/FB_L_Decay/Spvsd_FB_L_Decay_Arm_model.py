@@ -125,10 +125,10 @@ class FB_L_Arm_model:
 
             u,c_decay = agent(c_y,c_t)
 
+            # Store both the control signal and the time decay parameter
             u_values.append(u)
             e_params.append(c_decay)
 
-            #c_decay = torch.exp(c_t * exp_param)  # 9.037 5 # being slope of linear time decay
 
             # Compute 4 different slopes to perfom the update
 
