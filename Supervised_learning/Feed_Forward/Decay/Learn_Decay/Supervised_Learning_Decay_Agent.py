@@ -18,13 +18,13 @@ class S_Agent(nn.Module): # inherit for easier managing of trainable parameters
         action_0 = self.gaussian_convol(action_0)
 
         self.actions = nn.Parameter(action_0) # initalise means randomly
-        self.decay = nn.Parameter(torch.rand(1))
+        self.decay = nn.Parameter(torch.rand(1)* 10) #
 
         # Each of dict will define a separate parameter group, and should contain a params key,
         # containing a list of parameters belonging to it. This allows to used separate ln_rate
         self.optimiser1 = opt.Adam([
             {'params': [self.actions]},
-            {'params': [self.decay], 'lr': 1e-3}
+            {'params': [self.decay], 'lr': 1e-1} #1e-2
         ],ln_rate)
 
 
@@ -32,7 +32,7 @@ class S_Agent(nn.Module): # inherit for easier managing of trainable parameters
 
     def give_parameters(self): # sample all control signals in one go and store their log p
 
-        return self.actions, torch.clip(self.decay,0,1)  #, torch.clip(self.decay,0,1.73) # 1.73 because it is highest value at which t=0.4, e^(1.73*t) <1
+        return self.actions, self.decay  #, torch.clip(self.decay,0,1.73) # 1.73 because it is highest value at which t=0.4, e^(1.73*t) <1
 
 
 

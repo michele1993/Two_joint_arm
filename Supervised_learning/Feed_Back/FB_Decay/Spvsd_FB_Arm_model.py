@@ -1,20 +1,19 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 import torch
 
+# Create arm model for feedback agent using a fixed exponential time decay on certain dyanmics
 
 
+class FB_Arm_model:
 
-class Spvsd_L_Decay_Arm_model:
-
-    def __init__(self,tspan,x0,dev, n_arms=10, height=1.8, mass=80):
+    def __init__(self,tspan,x0,dev,decay_w, n_arms=10, height=1.8, mass=80):
 
         self.dev = dev
         # Simulation parameters
         self.tspan = tspan
         self.n_arms = n_arms
 
+        self.decay_w = decay_w
 
         #self.x0 = torch.Tensor(x0).expand(self.n_arms,-1,-1) # -1 leaves dim unchaged, for 1d tensor, always use expand instead of repeat
 
@@ -60,7 +59,6 @@ class Spvsd_L_Decay_Arm_model:
     def inverse_M(self, theta2): # this methods allows to compute the inverse of matrix (function) M(theta2)
 
 
-
         M11 = self.alpha + self.omega * torch.cos(theta2)
 
         M12 = 0.5 * self.omega * torch.cos(theta2) + self.beta
@@ -83,7 +81,9 @@ class Spvsd_L_Decay_Arm_model:
 
 
 
-    def dynamical_system(self,y,u, decay_w): # create equivalent 1st order dynamical system of equations to be passed to solve_ivp
+    def dynamical_system(self,y,u,c_decay):
+
+        # create equivalent 1st order dynamical system of equations to be passed to solve_ivp
 
         inv_MM = self.inverse_M(y[:,1])
 
@@ -97,12 +97,11 @@ class Spvsd_L_Decay_Arm_model:
 
         d_eq = inv_MM @ eq_rhs
 
-        # doesn't make sense to make it for velocity
-        return torch.cat([d_thet , d_eq - decay_w * d_thet, y[:,6:8] - decay_w * y[:,4:6], u - decay_w * y[:,6:8]],dim=1)
-        #d_thet - decay_w * y[:,0:2]
+        return torch.cat([d_thet, d_eq - c_decay * d_thet, y[:,6:8] - c_decay * torques, u - c_decay * y[:,6:8]],dim=1)
+        #return torch.cat([d_thet, d_eq, y[:,6:8],u],dim=1)
 
 
-    #
+
     # if torch.sum(torch.isnan(y)) >0: # check if y contains any nan
     #     print('y')
     #     print(y)
@@ -110,54 +109,56 @@ class Spvsd_L_Decay_Arm_model:
 
 
 
-    def perform_reaching(self, t_step,u,decay_param):
+    def perform_reaching(self, t_step,agent):
 
         n_iterations = int((self.tspan[1] - self.tspan[0]) / t_step)
-
         y = []
         c_y = self.x0
-        t = torch.linspace(self.tspan[0],self.tspan[1],n_iterations+1)
-
+        u_values = []
+        t = torch.linspace(self.tspan[0], self.tspan[1], n_iterations + 1)
 
 
         for it in range(n_iterations):
 
-            #c_t = t[it]
-            #c_decay = torch.clip(torch.exp(c_t *1.73)-1,0,1) #torch.clip(torch.exp(c_t * decay_p) -1,0,1)
-            c_decay = torch.exp(t[it] * decay_param)
-
             y.append(c_y)
-            # Compute 4 different slopes, k, for initial point, to perform one-step update according to RK4 implementation
+            c_decay = torch.exp(t[it] * self.decay_w)  # 9.037 5 # being slope of linear time decay
 
-            k1 = self.dynamical_system(c_y,u[:,:,it:it+1],c_decay) # use it:it+1 to keep the dim of original tensor without slicing it
+            u = agent(c_y)
+            u_values.append(u)
+
+
+            # Compute 4 different slopes to perfom the update
+
+            k1 = self.dynamical_system(c_y,u,c_decay) # use it:it+1 to keep the dim of original tensor without slicing it
 
             n_y = c_y + (k1 * t_step/2)
 
-            k2 = self.dynamical_system( n_y,u[:,:,it:it+1],c_decay)
+            k2 = self.dynamical_system( n_y,u,c_decay)
 
             n_y = c_y + (k2 * t_step / 2)
 
-            k3 = self.dynamical_system( n_y, u[:,:,it:it+1],c_decay)
+            k3 = self.dynamical_system( n_y, u,c_decay)
 
             n_y = c_y + (k3 * t_step)
 
-            k4 = self.dynamical_system( n_y, u[:,:,it:it+1],c_decay)
+            k4 = self.dynamical_system( n_y, u,c_decay)
 
-            c_y = c_y + t_step * (1 / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
+            c_y = c_y + t_step * (1/6) * (k1 + 2*k2 + 2*k3 + k4) # use w_average of the for slope to compute a slope from initial point
 
 
         y.append(c_y) # store final locations, which contains backward gradient, through all previous points
-        return torch.stack(y)
 
+        return torch.stack(y), torch.stack(u_values)
 
 
 
     def compute_rwd(self,y, x_hat,y_hat, f_points): # based on average distance of last five points from target
 
-        #[x_c, y_c] = self.convert_coord(y[-1:, :,0], y[-1:,:, 1])
         [x_c, y_c] = self.convert_coord(y[f_points:, :, 0], y[f_points:, :, 1])
 
-        return (x_hat - x_c)**2 , (y_hat - y_c)**2 #torch.sqrt()# maintain original dimension for product with log_p
+        return (x_hat - x_c)**2 , (y_hat - y_c)**2
+
+
 
     def compute_vel(self,y, f_points):
 
@@ -169,11 +170,13 @@ class Spvsd_L_Decay_Arm_model:
         dx = - self.l1 * torch.sin(t1) * dt1 - self.l2 * (dt1+dt2) * torch.sin((t1+t2 ))
         dy = self.l1 * torch.cos(t1) * dt1 + self.l2 * (dt1 + dt2) * torch.cos((t1 + t2))
 
-        return dx**2, dy**2 #torch.sqrt() # maintain original dimension to sum with rwd
+        return dx**2, dy**2
+
 
     def compute_accel(self, vel, t_step):
 
-        return (vel[1:,:,:] - vel[:-1,:,:])/t_step
+        return (vel[1:, :, :] - vel[:-1, :, :]) / t_step
+
 
 
     # The following methods are useful for computing features of the arm (e.g. position, velocity etc.)
@@ -185,7 +188,6 @@ class Spvsd_L_Decay_Arm_model:
         y = self.l1 * torch.sin(theta1) + self.l2 * torch.sin(t1_t2)
 
         return [x, y]
-
 
 
     def armconfig_coord(self, theta1, theta2):
@@ -212,3 +214,18 @@ class Spvsd_L_Decay_Arm_model:
         config = np.array([s_coord, [e_xcoord, e_ycoord], [i_xcoord, i_ycoord]])
 
         return config
+
+
+    # def compute_rwd(self,y, t1_hat,t2_hat): # based on average distance of last five points from target
+    #
+    #     # Based on the openAI inverted pendulum
+    #
+    #     t1 = (t1_hat - y[1:,:,0])**2 # don't take first value since based on initial cond
+    #
+    #     # NEED TO SOME TWO ANGLES FOR SECOND TORQUE ?
+    #     t2 = (t2_hat - y[1:, :, 1]) ** 2 # don't take first value since based on initial cond
+    #
+    #     dt1 = y[1:, :, 2] ** 2 # don't take first value since based on initial cond
+    #     dt2 = y[1:, :, 3] ** 2 # don't take first value since based on initial cond
+    #
+    #     return t1 + t2 + 0.1*(dt1+dt2)

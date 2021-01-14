@@ -17,7 +17,8 @@ class Spvsd_FB_Agent(nn.Module): # inherit for easier managing of trainable para
         self.dev = dev
 
         self.l1 = nn.Linear(input_size,n_hiddens)
-        self.l2 = nn.Linear(n_hiddens,n_outputs)
+        self.l2 = nn.Linear(n_hiddens, n_hiddens)
+        self.l3 = nn.Linear(n_hiddens,n_outputs)
 
         self.optimiser = opt.Adam(self.parameters(),ln_rate)
 
@@ -34,10 +35,11 @@ class Spvsd_FB_Agent(nn.Module): # inherit for easier managing of trainable para
         sin_t2 = torch.sin(x[:,1])
         vel_t2 = x[:, 3]
 
-        inpt = torch.cat([cos_t1,sin_t1,vel_t1,cos_t2,sin_t2,vel_t2], dim=1) #CHECK DIM CORRECT! NETWORK takes input batchxsizex1 ?
+        inpt = torch.cat([cos_t1,sin_t1,vel_t1,cos_t2,sin_t2,vel_t2], dim=1) #CHECK DIM CORRECT! NETWORK takes input batchxsizex1 ? should be correct!
 
         inpt = F.relu(self.l1(inpt))
-        inpt = self.l2(inpt)
+        inpt = F.relu(self.l2(inpt))
+        inpt = self.l3(inpt)
 
 
         return torch.unsqueeze(inpt,dim=2) # need to add third dimension for the dynamical system

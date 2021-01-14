@@ -1,19 +1,18 @@
 import torch
 import numpy as np
-from Supervised_learning.Feed_Back.Spvsd_FB_Agent import Spvsd_FB_Agent
-from Supervised_learning.Feed_Back.FB_Standard.Spvsd_FB_Arm_model import FB_Arm_model
+from Supervised_learning.Feed_Back.FB_Decay.Spvsd_FB_Agent import Spvsd_FB_Agent
+from Supervised_learning.Feed_Back.FB_Decay.Spvsd_FB_Arm_model import FB_Arm_model
 
-episodes = 100000
-ln_rate = 0.01
+episodes = 30000
+ln_rate = 0.002 # may need a lower one, it's oscillating
 n_RK_steps = 100
-time_window = 10
-n_parametrised_steps = n_RK_steps
+time_window = 15
 t_print = 50
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
 t_step = tspan[-1]/n_RK_steps
 f_points = -time_window
-strt_window = n_RK_steps - time_window
+decay_weight = 9.037
 
 # Target endpoint, based on matlab - reach strainght in fron at shoulder height
 x_hat = 0.792
@@ -21,8 +20,8 @@ y_hat = 0
 #dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 dev = torch.device('cpu')
 
-arm = FB_Arm_model(tspan,x0,dev, n_arms=1)
-agent =Spvsd_FB_Agent(dev,ln_rate= ln_rate)
+arm = FB_Arm_model(tspan,x0,dev,decay_weight, n_arms=1)
+agent = Spvsd_FB_Agent(dev,ln_rate= ln_rate)
 
 ep_distance = []
 ep_velocity = []
@@ -34,7 +33,7 @@ training_velocity = []
 
 for ep in range(episodes):
 
-    thetas, u_s = arm.perform_reaching(t_step,agent,strt_window)
+    thetas, u_s = arm.perform_reaching(t_step,agent)
 
     # NOT SURE GOOD IDEA, maybe better to optim sqrt (i.e. actual distance):
     # Compute squared distance for x and y coord, so that can optimise that and then apply sqrt() to obtain actual distance as a measure of performance
@@ -68,14 +67,15 @@ for ep in range(episodes):
         ep_distance = []
         ep_velocity = []
 
-        if av_acc <= 0.0002:
+        if av_acc < 0.0001:
             break
 
 
 
-torch.save(thetas,'/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_Standard/Results/Supervised_FB_Basic_dynamics1.pt')
-torch.save(agent.state_dict(), '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_Standard/Results/Spvsd_FB_Basic_parameters1.pt')
+torch.save(thetas, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_Decay/Results/Spvsd_FB_Decay_dynamics_2.pt')
+torch.save(u_s, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_Decay/Results/Spvsd_FB_Decay_actions_2.pt')
+torch.save(agent.state_dict(), '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_Decay/Results/Spvsd_FB_Decay_NNparameters_2.pt')
 torch.save(training_accuracy,
-           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_Standard/Results/Supervised_FB_Basic_training_accuracy1.pt')
+           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_Decay/Results/Spvsd_FB_Decay_training_accuracy2.pt')
 torch.save(training_velocity,
-           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_Standard/Results/Supervised_Basic_FB_training_velocity1.pt')
+                      '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_Decay/Results/Spvsd_FB_Decay_training_velocity2.pt')

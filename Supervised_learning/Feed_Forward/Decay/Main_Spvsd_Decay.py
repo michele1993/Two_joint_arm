@@ -1,5 +1,5 @@
 #from Supervised_learning.Feed_Forward.Decay.Spvsd_Decay_Arm_Model import Spvsd_Decay_Arm_model
-from Supervised_learning.Feed_Forward.Decay.Spvsd_Linear_TimeDecay_Arm_Model import Spvsd_LinearDecay_Arm_model
+from Supervised_learning.Feed_Forward.Decay.Spvsd_Exp_TimeDecay_Arm_Model import Spvsd_ExpDecay_Arm_model
 from Supervised_learning.Feed_Forward.Supervised_agent import S_Agent
 import numpy as np
 import torch
@@ -11,13 +11,13 @@ episodes = 100000
 ln_rate= 10
 n_RK_steps = 100
 time_window = 10
-n_parametrised_steps = n_RK_steps #- time_window
+n_parametrised_steps = n_RK_steps - time_window
 t_print = 50
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
 t_step = tspan[-1]/n_RK_steps
 f_points = -time_window
-decay_w = 10#0.6
+decay_w = 9.037#10
 
 # Target endpoint, based on matlab - reach strainght in fron at shoulder height
 x_hat = 0.792
@@ -27,7 +27,7 @@ dev = torch.device('cpu')
 
 #arm = Spvsd_Decay_Arm_model(tspan,x0,dev,decay_w, n_arms=1)
 
-arm = Spvsd_LinearDecay_Arm_model(tspan,x0,dev,decay_w, n_arms=1)
+arm = Spvsd_ExpDecay_Arm_model(tspan, x0, dev, decay_w, n_arms=1)
 agent = S_Agent(n_parametrised_steps, dev,ln_rate= ln_rate)
 
 ep_distance = []
@@ -41,8 +41,8 @@ training_velocity = []
 for ep in range(episodes):
 
     actions = agent.give_actions()
-    #zero_actions = torch.zeros(1, 2, time_window).to(dev)
-    #actions = torch.cat([actions, zero_actions], dim=2)
+    zero_actions = torch.zeros(1, 2, time_window).to(dev)
+    actions = torch.cat([actions, zero_actions], dim=2)
 
     thetas = arm.perform_reaching(t_step,actions)
 

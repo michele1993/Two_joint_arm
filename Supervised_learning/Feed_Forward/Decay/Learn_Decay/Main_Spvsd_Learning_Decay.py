@@ -7,10 +7,10 @@ import torch
 # distance and velocity as cost function, with no regularisation or decay.
 
 episodes = 100000
-ln_rate= 10
+ln_rate= 10 # 5
 n_RK_steps = 100
 time_window = 10
-n_parametrised_steps = n_RK_steps
+n_parametrised_steps = n_RK_steps - time_window
 t_print = 50
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
@@ -20,8 +20,8 @@ f_points = -time_window
 
 
 # Target endpoint, based on matlab - reach strainght in fron at shoulder height
-x_hat = 0.792
-y_hat = 0
+x_hat = 0#0.392#0.792
+y_hat = - 0.792#- 0.2
 #dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 dev = torch.device('cpu')
 
@@ -40,6 +40,8 @@ training_velocity = []
 for ep in range(episodes):
 
     actions,decay_p = agent.give_parameters() #
+    zero_actions = torch.zeros(1, 2, time_window).to(dev)
+    actions = torch.cat([actions, zero_actions], dim=2)
 
     thetas = arm.perform_reaching(t_step,actions, decay_p)
 
@@ -75,19 +77,19 @@ for ep in range(episodes):
         ep_distance = []
         ep_velocity = []
 
-        if av_acc <= 0.0002:
+        if av_acc <= 0.0002:# 0.0005
             break
 
 
 
 
 torch.save(thetas,
-           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Learn_Decay/Results/Supervised_Correct_L_Decay_dynamics_WithVeloc1.pt')
+           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Learn_Decay/Results/Supervised_L_ExpTDecay_dynamics_3.pt')
 torch.save(actions,
-           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Learn_Decay/Results/Supervised_Correct_L_Decay_actions_WithVeloc1.pt')
+           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Learn_Decay/Results/Supervised_L_ExpTDecay_actions_3.pt')
 torch.save(decay_p,
-           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Learn_Decay/Results/Supervised_Correct_L_DecayParameter_WithVeloc1.pt')
+           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Learn_Decay/Results/Supervised_L_ExpTDecayParameter_3.pt')
 torch.save(training_accuracy,
-           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Learn_Decay/Results/Supervised_Correct_L_training_accuracy_WithVeloc1.pt')
+           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Learn_Decay/Results/Supervised_L_ExpTtraining_accuracy_3.pt')
 torch.save(training_velocity,
-           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Learn_Decay/Results/Supervised_Correct_L_training_velocity_WithVeloc1.pt')
+           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Decay/Learn_Decay/Results/Supervised_L_ExpTtraining_velocity_3.pt')
