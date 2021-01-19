@@ -59,7 +59,6 @@ class FB_Par_Arm_model:
     def inverse_M(self, theta2): # this methods allows to compute the inverse of matrix (function) M(theta2)
 
 
-
         M11 = self.alpha + self.omega * torch.cos(theta2)
 
         M12 = 0.5 * self.omega * torch.cos(theta2) + self.beta
@@ -82,7 +81,7 @@ class FB_Par_Arm_model:
 
 
 
-    def dynamical_system(self,y,u): # create equivalent 1st order dynamical system of equations to be passed to solve_ivp
+    def dynamical_system(self,y,u,c_decay): # create equivalent 1st order dynamical system of equations to be passed to solve_ivp
 
         inv_MM = self.inverse_M(y[:,1])
 
@@ -96,8 +95,8 @@ class FB_Par_Arm_model:
 
         d_eq = inv_MM @ eq_rhs
 
-        return torch.cat([d_thet, d_eq, y[:,6:8],u],dim=1)
 
+        return torch.cat([d_thet, d_eq - c_decay * d_thet, y[:,6:8] - c_decay * torques,u - c_decay * y[:,6:8]],dim=1)
 
     # if torch.sum(torch.isnan(y)) >0: # check if y contains any nan
     #     print('y')
@@ -111,40 +110,44 @@ class FB_Par_Arm_model:
         n_iterations = int((self.tspan[1] - self.tspan[0]) / t_step)
 
         y = []
-        c_y = self.x0.clone() # need to detach ? No if you wanna differentiate through RK
-        u_values = []
+        c_y = self.x0
 
+        u_values = []
+        e_params = []
+
+        t = torch.linspace(self.tspan[0], self.tspan[1], n_iterations + 1).to(self.dev)
 
         for it in range(n_iterations):
 
-            u = agent(c_y,train)
-            u_values.append(u)
+            u, c_decay = agent(c_y,t[it],train)
 
-            y.append(c_y.detach().clone()) # store intermediate values, but without keeping track of gradient for each
+            # Store values, detaching gradient just in case, as done through REINFORCE - though should already been detached by sampling
+            u_values.append(u.detach())
+            e_params.append(c_decay.detach())
+            y.append(c_y.detach()) # store intermediate values, but without keeping track of gradient for each
 
             # Compute 4 different slopes to perfom the update
 
-            k1 = self.dynamical_system(c_y,u) # use it:it+1 to keep the dim of original tensor without slicing it
+            k1 = self.dynamical_system(c_y,u,c_decay) # use it:it+1 to keep the dim of original tensor without slicing it
 
             n_y = c_y + (k1 * t_step/2)
 
-            k2 = self.dynamical_system( n_y,u)
+            k2 = self.dynamical_system( n_y,u,c_decay)
 
             n_y = c_y + (k2 * t_step / 2)
 
-            k3 = self.dynamical_system( n_y, u)
+            k3 = self.dynamical_system( n_y, u,c_decay)
 
             n_y = c_y + (k3 * t_step)
 
-            k4 = self.dynamical_system( n_y, u)
+            k4 = self.dynamical_system( n_y, u,c_decay)
 
-            c_y += t_step * (1/6) * (k1 + 2*k2 + 2*k3 + k4) # use w_average of the for slope to compute a slope from initial point
+            c_y = c_y + t_step * (1/6) * (k1 + 2*k2 + 2*k3 + k4) # use w_average of the for slope to compute a slope from initial point
 
 
-        y.append(c_y) # store final locations, which contains backward gradient, through all previous points
+        y.append(c_y.detach()) # store final locations, which contains backward gradient, through all previous points
 
-        return torch.stack(y), torch.stack(u_values)
-
+        return torch.stack(y), torch.stack(u_values), torch.stack(e_params)
 
 
 
@@ -166,7 +169,7 @@ class FB_Par_Arm_model:
 
         [x_c, y_c] = self.convert_coord(y[f_points:, :, 0], y[f_points:, :, 1])
 
-        return torch.mean((y_hat - y_c)**2 + (x_hat - x_c)**2,dim=0,keepdim=True)
+        return (y_hat - y_c)**2, (x_hat - x_c)**2
 
 
 
@@ -180,7 +183,7 @@ class FB_Par_Arm_model:
         dx = - self.l1 * torch.sin(t1) * dt1 - self.l2 * (dt1+dt2) * torch.sin((t1+t2 ))
         dy = self.l1 * torch.cos(t1) * dt1 + self.l2 * (dt1 + dt2) * torch.cos((t1 + t2))
 
-        return torch.mean(dx**2 + dy**2, dim=0,keepdim=True)
+        return dx**2, dy**2
 
 
 

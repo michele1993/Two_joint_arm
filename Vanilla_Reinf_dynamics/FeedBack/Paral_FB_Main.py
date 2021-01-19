@@ -17,70 +17,77 @@ n_arms = 5000
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
-f_points = -20
+f_points = -10
 
 
 # Target endpoint, based on matlab - reach straight in front, at shoulder height
-t1_hat = 0
-t2_hat = 0
-
 x_hat = 0.792
 y_hat = 0
 
 training_arm = FB_Par_Arm_model(tspan,x0,dev, n_arms=n_arms)
-agent = FB_Reinf_Agent(dev=dev).to(dev)
+agent = FB_Reinf_Agent(dev=dev,n_arms= n_arms).to(dev)
 
 
 avr_rwd = 0
 avr_vel = 0
 alpha = 0.01
-beta = 0.8
+beta = 0.1 # 0.4
+
+training_acc = []
+training_vel = []
 
 ep_rwd = []
 ep_vel = []
-ep_dist =[]
 train = True
 
 
 for ep in range(episodes):
 
 
-    thetas, u = training_arm.perform_reaching(t_step,agent,train)
+    thetas, u, decay_param = training_arm.perform_reaching(t_step,agent,train)
 
-    #rwd = training_arm.compute_rwd(thetas,t1_hat,t2_hat)
-    rwd = training_arm.compute_distance(thetas,x_hat,y_hat, f_points)
-    #rwd = agent.forward_dis_return(rwd,n_RK_steps)
-    #rwd = agent.compute_discounted_returns(rwd,f_points)
+    sqrd_x, sqrd_y = training_arm.compute_distance(thetas,x_hat,y_hat, f_points)
+    sqrd_distance = sqrd_x + sqrd_y
+    sqrd_mean_distance = torch.mean(sqrd_distance,dim=0,keepdim=True)
 
-    advantage = rwd - avr_rwd
+
+    advantage = sqrd_mean_distance - avr_rwd
     avr_rwd += alpha * torch.mean(advantage)
 
 
-    velocity = training_arm.compute_vel(thetas,f_points)
-    vel_adv = velocity - avr_vel
+    sqrd_v_dx,sqrd_v_dy = training_arm.compute_vel(thetas,f_points)
+    sqrd_velocity = sqrd_v_dx + sqrd_v_dy
+    sqrd_mean_velocity = torch.mean(sqrd_velocity,dim=0,keepdim=True)
+
+    vel_adv = sqrd_mean_velocity - avr_vel
     avr_vel += alpha * torch.mean(vel_adv)
 
-
-    weighted_adv = advantage #+ beta * vel_adv
+    weighted_adv = advantage + beta * vel_adv
 
 
     agent.update(weighted_adv)
 
-    ep_rwd.append(torch.mean(rwd))
-    #ep_dist.append(torch.mean(distance))
-    ep_vel.append(torch.mean(torch.sqrt(velocity)))
+    ep_rwd.append(torch.mean(torch.sqrt(sqrd_distance.detach())))
+    ep_vel.append(torch.mean(torch.sqrt(sqrd_velocity.detach())))
 
 
     if ep % t_print == 0:
 
+        av_acc = sum(ep_rwd)/t_print
+        av_vel = sum(ep_vel)/t_print
+
+        training_acc.append(av_acc)
+        training_vel.append(av_vel)
+
         print("episode: ", ep)
-        #print("training accuracy: ",sum(ep_dist)/t_print)
-        print("training loss: ",sum(ep_rwd)/t_print)
-        print("effectors: ", torch.mean(u))
-        print("training velocity: ", sum(ep_vel)/t_print)
+        print("training distance: ",av_acc)
+        print("decay: ", torch.mean(decay_param[-1]))
+        print("End velocity: ",  av_vel,'\n')
         ep_rwd = []
-        ep_dist =[]
         ep_vel = []
+
+        if av_acc <= 0.0002:
+            break
 
 
 
@@ -91,13 +98,23 @@ for ep in range(episodes):
         #     print('Cached:   ', round(torch.cuda.memory_reserved(0) / 1024 ** 3, 1), 'GB')
 
 
+torch.save(agent.state_dict(), '/home/px19783/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedBack/FB_results/FB_parameters_Decay_1.pt')
+torch.save(training_acc,'/home/px19783/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedBack/FB_results/FB_TrainingAcc_Decay_1.pt')
+torch.save(training_vel,'/home/px19783/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedBack/FB_results/FB_TrainingVel_Decay_1.pt')
 
 train = False
-tst_tspan =tspan #[0, 0.4 + (t_step* f_points)] # extend time of simulation to see if arm bounce back
+tst_tspan = tspan #[0, 0.4 + (t_step* f_points)] # extend time of simulation to see if arm bounce back
 test_arm = FB_Par_Arm_model(tst_tspan,x0,dev,n_arms=1)
-thetas, tst_u = test_arm.perform_reaching(t_step, agent, train)
-rwd = training_arm.compute_rwd(thetas, t1_hat, t2_hat)
+agent.n_arms = 1
+thetas, tst_u,decay_param = test_arm.perform_reaching(t_step, agent, train)
 
-print(rwd[-1])
+tst_sqrd_x, tst_sqrd_y = test_arm.compute_distance(thetas, x_hat, y_hat, f_points)
+tst_sqrd_distance = tst_sqrd_x + tst_sqrd_y
+test_rwd = torch.mean(torch.sqrt(tst_sqrd_distance))
 
-torch.save(agent.state_dict(), 'FB_results/FB_parameters_1.pt')
+tst_sqrd_dx, tst_sqrd_dy = test_arm.compute_vel(thetas,f_points)
+tst_vel = torch.mean(torch.sqrt(tst_sqrd_dx + tst_sqrd_dy))
+print("test accuracy: ",test_rwd)
+print("test velocity: ", tst_vel)
+
+
