@@ -55,8 +55,8 @@ for ep in range(episodes):
     sqrd_velocity = torch.mean( window_srd_dx + window_srd_dy,dim=0,keepdim=True)
 
     # Compute actual velocity
-    full_velocity = torch.sqrt(sqrd_dx + sqrd_dy)
-    acceleration = arm.compute_accel(full_velocity,t_step)
+    entire_velocity = torch.sqrt(sqrd_dx + sqrd_dy)
+    acceleration = arm.compute_accel(entire_velocity,t_step)
 
     # --------------- Need this, if wanna regularise thor -------------------------------------
     # tor = thetas[:, :, 4:6]

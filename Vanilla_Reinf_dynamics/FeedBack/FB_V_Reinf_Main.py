@@ -1,5 +1,5 @@
 from Vanilla_Reinf_dynamics.FeedBack.FB_V_Reinf_Agent import FB_Reinf_Agent
-from Vanilla_Reinf_dynamics.FeedBack.FB_Parall_Arm_model import FB_Par_Arm_model
+from Vanilla_Reinf_dynamics.FeedBack.FB_V_Reinf_Parall_Arm_model import FB_Par_Arm_model
 import torch
 
 import numpy as np

@@ -10,7 +10,7 @@ from torch.distributions import Normal
 class FB_Reinf_Agent(nn.Module): # inherit for easier managing of trainable parameters
 
 
-    def __init__(self,dev,n_arms,input_size = 7, n_hiddens = 128,n_outputs = 3, std = 1, ln_rate= 0.001, discount = 0.95):#ln_rate= 0.005
+    def __init__(self,dev,n_arms,input_size = 7, n_hiddens = 128,n_outputs = 3, std = 1, ln_rate= 0.0005, discount = 0.95):#ln_rate= 0.005
 
         super().__init__()
 

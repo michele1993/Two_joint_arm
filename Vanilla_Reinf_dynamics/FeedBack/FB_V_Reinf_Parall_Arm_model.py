@@ -185,6 +185,10 @@ class FB_Par_Arm_model:
 
         return dx**2, dy**2
 
+    def compute_accel(self, vel, t_step):
+
+        return (vel[1:, :, :] - vel[:-1, :, :]) / t_step
+
 
 
     # The following methods are useful for computing features of the arm (e.g. position, velocity etc.)
@@ -196,3 +200,28 @@ class FB_Par_Arm_model:
         y = self.l1 * torch.sin(theta1) + self.l2 * torch.sin(t1_t2)
 
         return [x, y]
+
+    def armconfig_coord(self, theta1, theta2):
+
+
+        # if theta is a scalar then can't use len() so set it to single coordinate (x,y)
+        if isinstance(theta1, (list, np.ndarray)):
+
+            s_coord = np.zeros((2, len(theta1))) # inialise shoulder position to the origin (0,0) for each configuration
+
+        else:
+
+            s_coord = np.zeros(2)
+
+
+        e_xcoord = self.l1 * np.cos(theta1)
+        e_ycoord = self.l1 * np.sin(theta1)
+
+        t1_t2 = theta1 + theta2
+
+        i_xcoord = self.l1 * np.cos(theta1) + self.l2 * np.cos(t1_t2)
+        i_ycoord = self.l1 * np.sin(theta1) + self.l2 * np.sin(t1_t2)
+
+        config = np.array([s_coord, [e_xcoord, e_ycoord], [i_xcoord, i_ycoord]])
+
+        return config
