@@ -39,7 +39,6 @@ class FB_Reinf_Agent(nn.Module): # inherit for easier managing of trainable para
 
         inpt = torch.cat([cos_t1,sin_t1,vel_t1,cos_t2,sin_t2,vel_t2,t.expand(self.n_arms,1)], dim=1) #CHECK?! first dim of expand should be n_arms, I belive
 
-
         inpt = F.relu(self.l1(inpt))
         inpt = F.relu(self.l2(inpt))
         inpt = self.l3(inpt)

@@ -6,7 +6,7 @@ from Supervised_learning.Feed_Back.FB_L_Decay.Spvsd_FB_L_Decay_Arm_model import 
 episodes = 20000
 ln_rate = 0.002
 n_RK_steps = 100
-time_window = 15
+time_window = 10
 t_print = 50
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
@@ -26,7 +26,7 @@ agent = Spvsd_FB_L_Agent(dev,ln_rate= ln_rate)
 ep_distance = []
 ep_velocity = []
 
-velocity_weight = 0.8
+velocity_weight = 0.4 # 0.8 usually
 
 training_accuracy= []
 training_velocity = []
@@ -68,16 +68,16 @@ for ep in range(episodes):
         ep_distance = []
         ep_velocity = []
 
-        if av_acc <= 0.0002:
+        if av_acc <= 0.0005:
             break
 
 
 
-torch.save(thetas, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_dynamics_1.pt')
-torch.save(u_s, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_actions_1.pt')
-torch.save(e_params, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_expParams_1.pt')
-torch.save(agent.state_dict(), '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_NNparameters_1.pt')
+torch.save(thetas, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_dynamics_NoAngAccelDecay_1.pt')
+torch.save(u_s, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_actions_NoAngAccelDecay_1.pt')
+torch.save(e_params, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_expParams_NoAngAccelDecay_1.pt')
+torch.save(agent.state_dict(), '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_NNparameters_NoAngAccelDecay_1.pt')
 torch.save(training_accuracy,
-           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_training_accuracy1.pt')
+           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_training_accuracy_NoAngAccelDecay_1.pt')
 torch.save(training_velocity,
-                      '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_training_velocity1.pt')
+                      '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_training_velocity_NoAngAccelDecay_1.pt')

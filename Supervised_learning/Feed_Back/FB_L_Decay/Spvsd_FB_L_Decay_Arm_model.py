@@ -96,7 +96,8 @@ class FB_L_Arm_model:
 
         d_eq = inv_MM @ eq_rhs
 
-        return torch.cat([d_thet, d_eq - c_decay * d_thet, y[:,6:8] - c_decay * torques, u - c_decay * y[:,6:8]],dim=1)
+        return torch.cat([d_thet, d_eq , y[:,6:8] - c_decay * torques, u - c_decay * y[:,6:8]],dim=1)
+        # d_eq - c_decay * d_thet
         #return torch.cat([d_thet, d_eq, y[:,6:8],u],dim=1)
 
 
@@ -124,6 +125,7 @@ class FB_L_Arm_model:
             c_t = t[it]
 
             u,c_decay = agent(c_y,c_t)
+            c_decay = torch.clip(c_decay,0,200)
 
             # Store both the control signal and the time decay parameter
             u_values.append(u)
@@ -150,7 +152,7 @@ class FB_L_Arm_model:
 
         y.append(c_y) # store final locations, which contains backward gradient, through all previous points
 
-        return torch.stack(y), torch.stack(u_values), torch.stack(e_params)
+        return torch.stack(y), torch.stack(u_values), torch.stack(e_params) # should use torch.cat with the correct dimension instead
 
 
 
