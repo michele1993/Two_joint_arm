@@ -6,9 +6,9 @@ from TD_3.Vanilla_MemoryBuffer import V_Memory_B
 import numpy as np
 
 
-#dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-dev2 = torch.device('cpu')
-dev= dev2
+dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+#dev2 = torch.device('cpu')
+dev2= dev
 
 
 #TD_3 parameters:
@@ -48,8 +48,8 @@ env = FB_Par_Arm_model(t_step,x0,goal,t_window,dev,n_arms=n_arms)
 #Initialise actor and critic
 agent = Actor_NN(ln_rate = ln_rate_a,Output_size=action_space).to(dev)
 
-critic_1 = Critic_NN(ln_rate=ln_rate_c).to(dev)
-critic_2 = Critic_NN(ln_rate=ln_rate_c).to(dev)
+critic_1 = Critic_NN(dev,ln_rate=ln_rate_c).to(dev)
+critic_2 = Critic_NN(dev,ln_rate=ln_rate_c).to(dev)
 
 #Initialise Buffer:
 buffer = V_Memory_B(n_arms,dev2,a_space=action_space,s_space = state_space, batch_size=batch_size,size=buffer_size)

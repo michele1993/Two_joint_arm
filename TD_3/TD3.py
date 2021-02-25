@@ -20,12 +20,12 @@ class TD3:
         self.MBuffer = buffer
 
         # Initialise the first target critic target NN
-        self.critic_target_1 = Critic_NN().to(self.dev)
+        self.critic_target_1 = Critic_NN(dev).to(self.dev)
         self.critic_target_1.load_state_dict(self.critic_1.state_dict()) # Make sure two critic NN have the same initial parameters
         self.critic_target_1.freeze_params()# Freeze the critic target NN parameter
 
         # Initialise the second target critic target NN
-        self.critic_target_2 = Critic_NN().to(self.dev)
+        self.critic_target_2 = Critic_NN(dev).to(self.dev)
         self.critic_target_2.load_state_dict(self.critic_2.state_dict()) # Make sure two critic NN have the same initial parameters
         self.critic_target_2.freeze_params()# Freeze the critic target NN parameter
 
