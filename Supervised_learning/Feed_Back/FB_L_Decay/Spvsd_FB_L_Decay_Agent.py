@@ -35,7 +35,6 @@ class Spvsd_FB_L_Agent(nn.Module): # inherit for easier managing of trainable pa
         sin_t2 = torch.sin(x[:,1])
         vel_t2 = x[:, 3]
 
-
         inpt = torch.cat([cos_t1,sin_t1,vel_t1,cos_t2,sin_t2,vel_t2,t.expand(1,1)], dim=1) # first dim of expand should be n_arms, I belive
 
 

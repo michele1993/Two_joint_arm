@@ -10,22 +10,24 @@ from torch.distributions import Normal
 class FB_Reinf_Agent(nn.Module): # inherit for easier managing of trainable parameters
 
 
-    def __init__(self,dev,input_size = 6, n_hiddens = 128,n_outputs = 2, std = 1, ln_rate= 0.05, discount = 0.95):
+    def __init__(self,dev,n_arms,input_size = 7, n_hiddens = 128,n_outputs = 3, std = 0.5, ln_rate= 0.0005, discount = 0.95):#ln_rate= 0.0005
 
         super().__init__()
 
         self.dev = dev
         self.std = std
         self.discount = discount
+        self.n_arms = n_arms
 
         self.l1 = nn.Linear(input_size,n_hiddens)
-        self.l2 = nn.Linear(n_hiddens,n_outputs)
+        self.l2 = nn.Linear(n_hiddens,n_hiddens)
+        self.l3 = nn.Linear(n_hiddens,n_outputs)
 
         self.optimiser = opt.Adam(self.parameters(),ln_rate)
         self.store_logs = []
 
 
-    def forward(self,x,train): # sample all control signals in one go and store their log p
+    def forward(self,x,t,train): # sample all control signals in one go and store their log p
 
         cos_t1 = torch.cos(x[:,0])
         sin_t1 = torch.sin(x[:,0])
@@ -35,26 +37,25 @@ class FB_Reinf_Agent(nn.Module): # inherit for easier managing of trainable para
         sin_t2 = torch.sin(x[:,1])
         vel_t2 = x[:, 3]
 
-        inpt = torch.cat([cos_t1,sin_t1,vel_t1,cos_t2,sin_t2,vel_t2], dim=1) #CHECK DIM CORRECT! NETWORK takes input batchxsizex1 ?
+        inpt = torch.cat([cos_t1,sin_t1,vel_t1,cos_t2,sin_t2,vel_t2,t.expand(self.n_arms,1)], dim=1) #CHECK?! first dim of expand should be n_arms, I belive
 
         inpt = F.relu(self.l1(inpt))
-        inpt = self.l2(inpt)
+        inpt = F.relu(self.l2(inpt))
+        inpt = self.l3(inpt)
 
-        #inpt = torch.clip(inpt,-20,20)
 
         if train:
             d = Normal(inpt, self.std)
-
             inpt = d.sample()
             log_ps = d.log_prob(inpt)
 
             self.store_logs.append(log_ps)
 
-        return torch.unsqueeze(inpt,dim=2) # need to add third dimension for the dynamical system
-
+        return torch.unsqueeze(inpt[:,0:2],dim=2), torch.clip(inpt[:,2],0, 200).view(-1,1,1) # need to add third dimension for the dynamical system
 
 
     def update(self, rwd):
+
 
         log_ps = torch.stack(self.store_logs)
 
@@ -66,8 +67,6 @@ class FB_Reinf_Agent(nn.Module): # inherit for easier managing of trainable para
         loss.backward()
 
         self.optimiser.step()
-
-        self.log_ps = None # flush self.log just in case
 
         return loss
 
