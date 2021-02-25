@@ -14,10 +14,12 @@ import matplotlib.pyplot as plt
 # Decay_Regul_1: used accel_weight = 0.0000001; model learn, but still decelerates too much
 # Decay_Regul_2: used accel_weight = 0.000001 # model doesn't learn to stop, but deceleration is good
 #-------------------------------------------------------------------------------------------------------
+# NoAngAccelDecay_1.pt : converges to 0.0020 accuracy and 0.0040 vel at around 25000eps, without using decay on angular accelleration
+#-------------------------------------------------------------------------------------------------------
 
-training_acc = torch.load('/home/px19783/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedBack/Regularised/Results/FB_TrainingAcc_Decay_Regul_3.pt')
-training_vel = torch.load('/home/px19783/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedBack/Regularised/Results/FB_TrainingVel_Decay_Regul_3.pt')
-parameters = torch.load('/home/px19783/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedBack/Regularised/Results/FB_parameters_Decay_Regul_3.pt')
+training_acc = torch.load('/home/px19783/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedBack/FB_results/FB_TrainingAcc_Decay_NoAngAccelDecay_1.pt')
+training_vel = torch.load('/home/px19783/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedBack/FB_results/FB_TrainingVel_Decay_NoAngAccelDecay_1.pt')
+parameters = torch.load('/home/px19783/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedBack/FB_results/FB_parameters_Decay_NoAngAccelDecay_1.pt')
 
 
 dev = torch.device('cpu')
@@ -76,49 +78,65 @@ tst_acceleration = test_arm.compute_accel(tst_velocity, t_step)
 print(tst_acceleration[-1])
 
 
-plt.tight_layout()
+#plt.tight_layout()
 
 
 fig1 = plt.figure()
 
-ax1 = fig1.add_subplot(321)
+ax1 = fig1.add_subplot(221)
 
 ax1.plot(t,torch.squeeze(tst_velocity)) # take final velocity
 
 ax1.set_title("velocity")
 
-ax2 = fig1.add_subplot(322)
+ax2 = fig1.add_subplot(222)
 
 ax2.plot(t[:-1],torch.squeeze(tst_acceleration))
 
 ax2.set_title("acceleration")
 
 
-ax3 = fig1.add_subplot(323)
-ax3.plot(t[:-1],test_actions[:,0,0])
+ax3 = fig1.add_subplot(223)
 
-ax3.set_title("u_1")
+ax3.plot(training_steps,training_acc[1:])
 
-ax4 = fig1.add_subplot(324)
+ax3.set_title("Training Accuracy")
 
-ax4.plot(t[:-1],test_actions[:,0,1])
+ax3.set_xlabel("x50")
 
-ax4.set_title("u_2")
+ax4 = fig1.add_subplot(224)
+ax4.plot(training_steps,training_vel[1:])
+ax4.set_title("Training Velocity")
+ax4.set_xlabel("x50")
 
-ax5 = fig1.add_subplot(325)
+fig2 = plt.figure()
 
-ax5.plot(training_steps,training_acc[1:])
+ax12 = fig2.add_subplot(321)
+ax12.plot(t[:-1],test_actions[:,0,0])
 
-ax5.set_title("Training Accuracy")
+ax12.set_title("u_1")
 
-ax5.set_xlabel("x50")
+ax22 = fig2.add_subplot(322)
 
-ax6 = fig1.add_subplot(326)
+ax22.plot(t[:-1],test_actions[:,0,1])
 
-ax6.plot(training_steps,training_vel[1:])
+ax22.set_title("u_2")
 
-ax6.set_title("Training Velocity")
-ax6.set_xlabel("x50")
+ax32 = fig2.add_subplot(323)
+ax32.plot(t,torch.squeeze(dynamics[:,:,4])) # take final velocity
+ax32.set_title("thor1")
+
+ax42 = fig2.add_subplot(324)
+ax42.plot(t,torch.squeeze(dynamics[:,:,5])) # take final velocity
+ax42.set_title("thor2")
+
+ax52 = fig2.add_subplot(325)
+ax52.plot(t,torch.squeeze(dynamics[:,:,6])) # take final velocity
+ax52.set_title("d_thor1")
+
+ax62 = fig2.add_subplot(326)
+ax62.plot(t,torch.squeeze(dynamics[:,:,7])) # take final velocity
+ax62.set_title("d_thor2")
 
 
 plt.show()

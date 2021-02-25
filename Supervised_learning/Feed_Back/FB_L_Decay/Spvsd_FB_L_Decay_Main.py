@@ -3,10 +3,10 @@ import numpy as np
 from Supervised_learning.Feed_Back.FB_L_Decay.Spvsd_FB_L_Decay_Agent import Spvsd_FB_L_Agent
 from Supervised_learning.Feed_Back.FB_L_Decay.Spvsd_FB_L_Decay_Arm_model import FB_L_Arm_model
 
-episodes = 20000
+episodes = 30000
 ln_rate = 0.002
 n_RK_steps = 100
-time_window = 10
+time_window = 20
 t_print = 50
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
@@ -15,8 +15,8 @@ f_points = -time_window
 
 
 # Target endpoint, based on matlab - reach strainght in fron at shoulder height
-x_hat = 0.792
-y_hat = 0
+x_hat = 0.38#0.792
+y_hat = - 0.38 # 0
 #dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 dev = torch.device('cpu')
 
@@ -26,7 +26,7 @@ agent = Spvsd_FB_L_Agent(dev,ln_rate= ln_rate)
 ep_distance = []
 ep_velocity = []
 
-velocity_weight = 0.4 # 0.8 usually
+velocity_weight = 0.8 # 0.8 usually
 
 training_accuracy= []
 training_velocity = []
@@ -68,16 +68,16 @@ for ep in range(episodes):
         ep_distance = []
         ep_velocity = []
 
-        if av_acc <= 0.0005:
+        if av_acc <= 0.00005:
             break
 
 
 
-torch.save(thetas, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_dynamics_NoAngAccelDecay_1.pt')
-torch.save(u_s, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_actions_NoAngAccelDecay_1.pt')
-torch.save(e_params, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_expParams_NoAngAccelDecay_1.pt')
-torch.save(agent.state_dict(), '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_NNparameters_NoAngAccelDecay_1.pt')
+torch.save(thetas, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_dynamics_NoAngAccelDecay_2.pt')
+torch.save(u_s, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_actions_NoAngAccelDecay_2.pt')
+torch.save(e_params, '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_expParams_NoAngAccelDecay_2.pt')
+torch.save(agent.state_dict(), '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_NNparameters_NoAngAccelDecay_2.pt')
 torch.save(training_accuracy,
-           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_training_accuracy_NoAngAccelDecay_1.pt')
+           '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_training_accuracy_NoAngAccelDecay_2.pt')
 torch.save(training_velocity,
-                      '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_training_velocity_NoAngAccelDecay_1.pt')
+                      '/home/px19783/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Back/FB_L_Decay/Results/Spvsd_FB_L_Decay_training_velocity_NoAngAccelDecay_2.pt')

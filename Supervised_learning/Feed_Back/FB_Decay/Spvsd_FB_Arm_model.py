@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 # Create arm model for feedback agent using a fixed exponential time decay on certain dyanmics
-
+#KEY: This implementation includes decay on the angular accelleration in the dynamics
 
 class FB_Arm_model:
 

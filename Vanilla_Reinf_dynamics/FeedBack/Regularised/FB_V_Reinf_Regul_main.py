@@ -33,6 +33,8 @@ alpha = 0.01
 beta = 0.1 # 0.4
 
 # Tried : --------------------------------------------------------------------------------------------
+# Notice regularising euclidean accel not optimal as this is reflected at the end-point, rather than in controller
+
 # accel_weight = 0.0000001; model learn, but still decelerates too much
 #accel_weight = 0.000001 # model doesn't learn to stop, but deceleration is good
 

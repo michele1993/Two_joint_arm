@@ -1,23 +1,26 @@
 import numpy as np
 import torch
 
-# Create arm model for feedback agent learning an exponential time decay parameter, applied to certain dyanmics
-# #KEY: This implementation does NOT include decay on the angular accelleration in the dynamics
 
-class FB_L_Arm_model:
 
-    def __init__(self,tspan,x0,dev, n_arms=10, height=1.8, mass=80):
+
+class FB_Par_Arm_model:
+
+    def __init__(self,t_step,x0,goal,t_window,dev, n_arms=10, height=1.8, mass=80):
 
         self.dev = dev
         # Simulation parameters
-        self.tspan = tspan
+        self.t_step = t_step
         self.n_arms = n_arms
+        self.t_window = t_window
 
 
-        #self.x0 = torch.Tensor(x0).expand(self.n_arms,-1,-1) # -1 leaves dim unchaged, for 1d tensor, always use expand instead of repeat
+        # Target parameters
+        self.x_hat, self.y_hat = goal
 
-        #I fear that by sharing memory location of x0(i.e. with expand()) may get some weird unpredicted error, better not risk it
+        # State parameters
         self.x0 = torch.Tensor(x0).repeat(self.n_arms, 1, 1).to(self.dev)
+        self.c_x = x0
 
         # Mass and height of ppt
         self.M = mass
@@ -80,9 +83,7 @@ class FB_L_Arm_model:
 
 
 
-    def dynamical_system(self,y,u,c_decay):
-
-        # create equivalent 1st order dynamical system of equations to be passed to solve_ivp
+    def dynamical_system(self,y,u,c_decay): # create equivalent 1st order dynamical system of equations to be passed to solve_ivp
 
         inv_MM = self.inverse_M(y[:,1])
 
@@ -96,84 +97,67 @@ class FB_L_Arm_model:
 
         d_eq = inv_MM @ eq_rhs
 
-        return torch.cat([d_thet, d_eq , y[:,6:8] - c_decay * torques, u - c_decay * y[:,6:8]],dim=1)
-        # d_eq - c_decay * d_thet
-        #return torch.cat([d_thet, d_eq, y[:,6:8],u],dim=1)
+
+        return torch.cat([d_thet, d_eq, y[:,6:8] - c_decay * torques,u - c_decay * y[:,6:8]],dim=1)
 
 
 
-    # if torch.sum(torch.isnan(y)) >0: # check if y contains any nan
-    #     print('y')
-    #     print(y)
-    #     exit()
+    def step(self, action,t):
+
+        action = torch.unsqueeze(action,dim=2) # need to increase dim to fit dynamical system parallel operations
+        u = action[:,0:2]
+        #c_decay = action[:,2:3]
+        c_decay = torch.zeros((1,1,1)).to(self.dev) # DELETE!!!
+
+        # Compute 4 different slopes to perfom the update
+
+        k1 = self.dynamical_system(self.c_x,u,c_decay) # use it:it+1 to keep the dim of original tensor without slicing it
+
+        n_y = self.c_x + (k1 * self.t_step/2)
+
+        k2 = self.dynamical_system( n_y,u,c_decay)
+
+        n_y = self.c_x + (k2 * self.t_step / 2)
+
+        k3 = self.dynamical_system( n_y, u,c_decay)
+
+        n_y = self.c_x + (k3 * self.t_step)
+
+        k4 = self.dynamical_system( n_y, u,c_decay)
+
+        self.c_x = self.c_x + self.t_step * (1/6) * (k1 + 2*k2 + 2*k3 + k4) # use w_average of the for slope to compute a slope from initial point
+
+        if t < self.t_window:
+
+            return self.c_x, torch.zeros(1).expand(self.n_arms,1).to(self.dev), torch.zeros(1).expand(self.n_arms,1).to(self.dev)
+        else:
+
+            return self.c_x, self.compute_distance(self.c_x), self.compute_vel(self.c_x)
+
+    def reset(self):
+
+        self.c_x = self.x0
+
+        return self.x0
+
+    def compute_distance(self,y): # based on average distance of last five points from target
+
+        [x_c, y_c] = self.convert_coord(y[:, 0], y[:, 1])
+
+        return (self.y_hat - y_c)**2 + (self.x_hat - x_c)**2
 
 
+    def compute_vel(self,y):
 
-    def perform_reaching(self, t_step,agent):
-
-        n_iterations = int((self.tspan[1] - self.tspan[0]) / t_step)
-        y = []
-        c_y = self.x0
-        u_values = []
-        e_params = []
-        t = torch.linspace(self.tspan[0], self.tspan[1], n_iterations + 1)
-
-
-        for it in range(n_iterations):
-
-            y.append(c_y)
-            c_t = t[it]
-
-            u,c_decay = agent(c_y,c_t)
-            # Store both the control signal and the time decay parameter
-            u_values.append(u)
-            e_params.append(c_decay)
-
-
-            # Compute 4 different slopes to perfom the update
-
-            k1 = self.dynamical_system(c_y,u,c_decay) # use it:it+1 to keep the dim of original tensor without slicing it
-
-            n_y = c_y + (k1 * t_step/2)
-
-            k2 = self.dynamical_system( n_y,u,c_decay)
-
-            n_y = c_y + (k2 * t_step / 2)
-
-            k3 = self.dynamical_system( n_y, u,c_decay)
-
-            n_y = c_y + (k3 * t_step)
-
-            k4 = self.dynamical_system( n_y, u,c_decay)
-
-            c_y = c_y + t_step * (1/6) * (k1 + 2*k2 + 2*k3 + k4) # use w_average of the for slope to compute a slope from initial point
-
-        y.append(c_y) # store final locations, which contains backward gradient, through all previous points
-
-        return torch.stack(y), torch.stack(u_values), torch.stack(e_params) # should use torch.cat with the correct dimension instead
-
-
-
-    def compute_rwd(self,y, x_hat,y_hat, f_points): # based on average distance of last five points from target
-
-        [x_c, y_c] = self.convert_coord(y[f_points:, :, 0], y[f_points:, :, 1])
-
-        return (x_hat - x_c)**2 , (y_hat - y_c)**2
-
-
-
-    def compute_vel(self,y, f_points):
-
-        t1 = y[f_points:, :,0] # [-1:,
-        t2 = y[f_points:, :,1] # [-1:,
-        dt1 = y[f_points:, :,2] # [-1:,
-        dt2 = y[f_points:, :,3] # [-1:,
+        t1 = y[:,0]
+        t2 = y[:,1]
+        dt1 = y[:,2]
+        dt2 = y[:,3]
 
         dx = - self.l1 * torch.sin(t1) * dt1 - self.l2 * (dt1+dt2) * torch.sin((t1+t2 ))
         dy = self.l1 * torch.cos(t1) * dt1 + self.l2 * (dt1 + dt2) * torch.cos((t1 + t2))
 
-        return dx**2, dy**2
-
+        return dx**2 + dy**2
 
     def compute_accel(self, vel, t_step):
 
@@ -190,7 +174,6 @@ class FB_L_Arm_model:
         y = self.l1 * torch.sin(theta1) + self.l2 * torch.sin(t1_t2)
 
         return [x, y]
-
 
     def armconfig_coord(self, theta1, theta2):
 
@@ -216,3 +199,18 @@ class FB_L_Arm_model:
         config = np.array([s_coord, [e_xcoord, e_ycoord], [i_xcoord, i_ycoord]])
 
         return config
+
+
+    def compute_rwd(self,y, t1_hat,t2_hat): # based on average distance of last five points from target
+
+        # Based on the openAI inverted pendulum
+
+        t1 = (t1_hat - y[1:,:,0])**2 # don't take first value since based on initial cond
+
+        # NEED TO SOME TWO ANGLES FOR SECOND TORQUE ?
+        t2 = (t2_hat - y[1:, :, 1]) ** 2 # don't take first value since based on initial cond
+
+        dt1 = y[1:, :, 2] ** 2 # don't take first value since based on initial cond
+        dt2 = y[1:, :, 3] ** 2 # don't take first value since based on initial cond
+
+        return t1 + t2 + 0.1*(dt1+dt2)

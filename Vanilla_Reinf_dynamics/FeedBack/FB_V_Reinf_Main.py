@@ -7,17 +7,17 @@ import numpy as np
 
 dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-#dev = torch.device('cpu')
+dev = torch.device('cpu')
 
 
-episodes = 15000
+episodes = 100000
 n_RK_steps = 100
-t_print = 50
-n_arms = 5000
+t_print = 100
+n_arms = 1#5000
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
-f_points = -10
+f_points = -15
 
 
 # Target endpoint, based on matlab - reach straight in front, at shoulder height
@@ -31,7 +31,7 @@ agent = FB_Reinf_Agent(dev=dev,n_arms= n_arms).to(dev)
 avr_rwd = 0
 avr_vel = 0
 alpha = 0.01
-beta = 0.1 # 0.4
+beta = 0.4 # 0.1
 
 training_acc = []
 training_vel = []
@@ -98,9 +98,9 @@ for ep in range(episodes):
         #     print('Cached:   ', round(torch.cuda.memory_reserved(0) / 1024 ** 3, 1), 'GB')
 
 
-torch.save(agent.state_dict(), '/home/px19783/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedBack/FB_results/FB_parameters_Decay_1.pt')
-torch.save(training_acc,'/home/px19783/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedBack/FB_results/FB_TrainingAcc_Decay_1.pt')
-torch.save(training_vel,'/home/px19783/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedBack/FB_results/FB_TrainingVel_Decay_1.pt')
+torch.save(agent.state_dict(), '/home/px19783/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedBack/FB_results/FB_parameters_Decay_NoAngAccelDecay_OneArm1.pt')
+torch.save(training_acc,'/home/px19783/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedBack/FB_results/FB_TrainingAcc_Decay_NoAngAccelDecay_OneArm1.pt')
+torch.save(training_vel,'/home/px19783/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedBack/FB_results/FB_TrainingVel_Decay_NoAngAccelDecay_OneArm1.pt')
 
 train = False
 tst_tspan = tspan #[0, 0.4 + (t_step* f_points)] # extend time of simulation to see if arm bounce back

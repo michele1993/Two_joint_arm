@@ -96,7 +96,9 @@ class FB_Par_Arm_model:
         d_eq = inv_MM @ eq_rhs
 
 
-        return torch.cat([d_thet, d_eq - c_decay * d_thet, y[:,6:8] - c_decay * torques,u - c_decay * y[:,6:8]],dim=1)
+        return torch.cat([d_thet, d_eq, y[:,6:8] - c_decay * torques,u - c_decay * y[:,6:8]],dim=1)
+        # d_eq - c_decay * d_thet
+
 
     # if torch.sum(torch.isnan(y)) >0: # check if y contains any nan
     #     print('y')
