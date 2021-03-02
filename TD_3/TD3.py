@@ -2,7 +2,7 @@ from TD_3.TD3_FB_Actor_Critic import *
 
 class TD3:
 
-    def __init__(self,actor,critic1,critic2,buffer,decay_upd,dev, t_policy_noise=0.2,t_noise_clip=0.5 ,actor_update=2,discount=1):
+    def __init__(self,actor,critic1,critic2,buffer,decay_upd,n_arms,dev, t_policy_noise=0.2,t_noise_clip=0.5 ,actor_update=2,discount=0.99):
 
         self.dev = dev
         self.discount = torch.tensor(discount).to(self.dev)
@@ -30,7 +30,7 @@ class TD3:
         self.critic_target_2.freeze_params()# Freeze the critic target NN parameter
 
         #Do the same for actor
-        self.target_agent = Actor_NN().to(self.dev)
+        self.target_agent = Actor_NN(n_arms).to(self.dev)
         self.target_agent.load_state_dict(self.actor.state_dict())
         self.target_agent.freeze_params()
 
@@ -56,7 +56,6 @@ class TD3:
         # Compute two Q target value
         Q_target = spl_rwd + spl_done * self.discount * target  # estimate maxQ given optimal action at next state in reply
 
-
         # Compute Q estimate based on reply episode
         Q_estimate_1 = self.critic_1(spl_c_state,spl_a)
         Q_estimate_2 = self.critic_2(spl_c_state, spl_a)
@@ -65,6 +64,7 @@ class TD3:
         # Update critic
         critic_loss1 = self.critic_1.update(Q_target, Q_estimate_1)
         critic_loss2 = self.critic_2.update(Q_target, Q_estimate_2)
+
 
         actor_loss = torch.tensor(0)
         # Update actor based on first critic

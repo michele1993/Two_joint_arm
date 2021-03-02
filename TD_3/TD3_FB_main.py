@@ -7,33 +7,33 @@ import numpy as np
 
 
 dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-#dev2 = torch.device('cpu')
-dev2= dev
+dev2 = torch.device('cpu')
+
 
 
 #TD_3 parameters:
 n_episodes = 10000
 buffer_size = 50000
 batch_size = 100 #  number of transition bataches (i.e. n_arms) sampled from buffer
-start_update = 25
+start_update = 50
 actor_update = 2
 ln_rate_c = 0.00002 # 0.002
 ln_rate_a = 0.00001 # 0.001
-decay_upd = 0.001
-std = 0.5
-beta =0# 0.05# 0.4
+decay_upd = 0.05 #0.005
+std = 1
+beta = 0.4# 0.05# 0.4
 action_space = 3 # two torques + decay
 state_space = 8
 
 # Simulation parameters
 n_RK_steps = 100
 t_print = 50
-n_arms = 1#00
+n_arms = 3#10
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape for dynamical system
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
-f_points = 2#11
-t_range = torch.linspace(tspan[0], tspan[1] - t_step, n_RK_steps).to(dev) # time values for simulations
+f_points = 11
+t_range = torch.linspace(tspan[0] + t_step, tspan[1], n_RK_steps).to(dev) # time values for simulations
 
 # Compute t at which t_window starts
 t_window = (n_RK_steps-f_points) / n_RK_steps * tspan[-1]
@@ -46,7 +46,7 @@ goal = (0.792,0)
 env = FB_Par_Arm_model(t_step,x0,goal,t_window,dev,n_arms=n_arms)
 
 #Initialise actor and critic
-agent = Actor_NN(ln_rate = ln_rate_a,Output_size=action_space).to(dev)
+agent = Actor_NN(n_arms,ln_rate = ln_rate_a).to(dev)
 
 critic_1 = Critic_NN(dev,ln_rate=ln_rate_c).to(dev)
 critic_2 = Critic_NN(dev,ln_rate=ln_rate_c).to(dev)
@@ -55,7 +55,7 @@ critic_2 = Critic_NN(dev,ln_rate=ln_rate_c).to(dev)
 buffer = V_Memory_B(n_arms,dev2,a_space=action_space,s_space = state_space, batch_size=batch_size,size=buffer_size)
 
 # Initialise DPG algorithm passing all the objects
-td3 = TD3(agent,critic_1,critic_2,buffer,decay_upd,dev, actor_update= actor_update)
+td3 = TD3(agent,critic_1,critic_2,buffer,decay_upd,n_arms,dev, actor_update= actor_update)
 
 
 cum_rwd = []
@@ -71,9 +71,14 @@ cum_actor_loss = []
 
 ep_actions = []
 
+# Initialise t0 for each arm
+t0 = torch.tensor([tspan[0]]).expand(n_arms,1,1).to(dev)
+
 for ep in range(1,n_episodes):
 
-    c_state = env.reset()
+
+    c_state = torch.cat([env.reset(), t0],dim=1)
+
     t_counter = 0
     ep_rwd = []
     ep_vel = []
@@ -83,7 +88,8 @@ for ep in range(1,n_episodes):
 
         det_action = agent(c_state).detach()
         stocasticity = torch.randn(n_arms,action_space).to(dev) * std
-        stocasticity = torch.cat([stocasticity[:,0:2], torch.clip(stocasticity[:,2:3],0)],dim=1)
+        #stocasticity = torch.cat([stocasticity[:,0:2], torch.clip(stocasticity[:,2:3],0)],dim=1)
+
         action = det_action + stocasticity
 
         n_state,sqrd_dist, sqrd_vel = env.step(action,t)
@@ -93,7 +99,10 @@ for ep in range(1,n_episodes):
         ep_rwd.append(torch.mean(torch.sqrt(sqrd_dist)))
         ep_vel.append(torch.mean(torch.sqrt(sqrd_vel)))
 
-        buffer.store_transition(c_state,action,rwd,n_state,dn[t_counter].expand(n_arms))
+        print(torch.cat([n_state,t.expand(n_arms,1,1)],dim=1))
+        exit()
+
+        buffer.store_transition(c_state,action,rwd,torch.cat([n_state,t.expand(n_arms,1,1)],dim=1),dn[t_counter].expand(n_arms))
         c_state = n_state
         t_counter+=1
 
@@ -104,7 +113,7 @@ for ep in range(1,n_episodes):
 
             critic_loss1,_,actor_loss = td3.update(step)
             cum_critc_loss.append(critic_loss1.detach())
-            cum_actor_loss.append(actor_loss)
+            cum_actor_loss.append(actor_loss.detach())
 
         step +=1
 
@@ -121,8 +130,8 @@ for ep in range(1,n_episodes):
         print("ep: ", ep)
         print("Aver final rwd: ", sum(cum_rwd)/t_print)
         print("Aver final vel: ", sum(cum_vel)/t_print)
-        print("Critic loss: ", sum(cum_critc_loss)/t_print)
-        print("Actor loss", sum(cum_actor_loss)*2 / t_print)
+        print("Critic loss: ", sum(cum_critc_loss)/(t_print*n_RK_steps))
+        print("Actor loss", sum(cum_actor_loss)*2 / (t_print*n_RK_steps))
         print("Actions", torch.norm(action))
         #print("Actions: ",ep_actions[-1],'\n')
         cum_rwd = []

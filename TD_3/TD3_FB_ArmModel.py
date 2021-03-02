@@ -129,7 +129,7 @@ class FB_Par_Arm_model:
 
         if t < self.t_window:
 
-            return self.c_x, torch.zeros(1).expand(self.n_arms,1).to(self.dev), torch.zeros(1).expand(self.n_arms,1).to(self.dev)
+            return self.c_x, torch.zeros(self.n_arms,1).to(self.dev), torch.zeros(self.n_arms,1).to(self.dev)
         else:
 
             return self.c_x, self.compute_distance(self.c_x), self.compute_vel(self.c_x)
