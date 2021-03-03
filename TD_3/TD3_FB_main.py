@@ -7,28 +7,29 @@ import numpy as np
 
 
 dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-dev2 = torch.device('cpu')
+#dev2 = torch.device('cpu')
+dev2 = dev
 
 
 
 #TD_3 parameters:
 n_episodes = 10000
-buffer_size = 50000
+buffer_size = 100000
 batch_size = 100 #  number of transition bataches (i.e. n_arms) sampled from buffer
 start_update = 50
 actor_update = 2
-ln_rate_c = 0.00002 # 0.002
-ln_rate_a = 0.00001 # 0.001
-decay_upd = 0.05 #0.005
-std = 1
-beta = 0.4# 0.05# 0.4
+ln_rate_c = 0.002#0.00002
+ln_rate_a = 0.001#0.00001
+decay_upd = 0.0005# 0.05
+std = 0.25#1
+beta = 0.6# 0.05# 0.4
 action_space = 3 # two torques + decay
-state_space = 8
+state_space = 7 # cosine, sine and angular vel of two torques + time
 
 # Simulation parameters
 n_RK_steps = 100
 t_print = 50
-n_arms = 3#10
+n_arms = 10
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape for dynamical system
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
@@ -52,7 +53,7 @@ critic_1 = Critic_NN(dev,ln_rate=ln_rate_c).to(dev)
 critic_2 = Critic_NN(dev,ln_rate=ln_rate_c).to(dev)
 
 #Initialise Buffer:
-buffer = V_Memory_B(n_arms,dev2,a_space=action_space,s_space = state_space, batch_size=batch_size,size=buffer_size)
+buffer = V_Memory_B(n_arms,dev2, batch_size=batch_size,size=buffer_size)
 
 # Initialise DPG algorithm passing all the objects
 td3 = TD3(agent,critic_1,critic_2,buffer,decay_upd,n_arms,dev, actor_update= actor_update)
@@ -72,7 +73,7 @@ cum_actor_loss = []
 ep_actions = []
 
 # Initialise t0 for each arm
-t0 = torch.tensor([tspan[0]]).expand(n_arms,1,1).to(dev)
+t0 = torch.tensor([tspan[0]]).expand(n_arms,1).to(dev)
 
 for ep in range(1,n_episodes):
 
@@ -94,22 +95,21 @@ for ep in range(1,n_episodes):
 
         n_state,sqrd_dist, sqrd_vel = env.step(action,t)
 
+        n_state = torch.cat([n_state,t.expand(n_arms,1)],dim=1) # add time value to state
+
         rwd = sqrd_dist + (sqrd_vel * beta)
 
         ep_rwd.append(torch.mean(torch.sqrt(sqrd_dist)))
         ep_vel.append(torch.mean(torch.sqrt(sqrd_vel)))
 
-        print(torch.cat([n_state,t.expand(n_arms,1,1)],dim=1))
-        exit()
-
-        buffer.store_transition(c_state,action,rwd,torch.cat([n_state,t.expand(n_arms,1,1)],dim=1),dn[t_counter].expand(n_arms))
+        buffer.store_transition(c_state,action,rwd,n_state,dn[t_counter].expand(n_arms))
         c_state = n_state
         t_counter+=1
 
-        ep_actions.append(torch.mean(action,dim=0))
+        ep_actions.append(torch.mean(action,dim=0,keepdim=True))
 
         # Check if it's time to update
-        if  ep > start_update: #t%25 == 0 and
+        if  ep > start_update and step % 3 == 0: #t%25 == 0 and
 
             critic_loss1,_,actor_loss = td3.update(step)
             cum_critc_loss.append(critic_loss1.detach())
@@ -132,7 +132,7 @@ for ep in range(1,n_episodes):
         print("Aver final vel: ", sum(cum_vel)/t_print)
         print("Critic loss: ", sum(cum_critc_loss)/(t_print*n_RK_steps))
         print("Actor loss", sum(cum_actor_loss)*2 / (t_print*n_RK_steps))
-        print("Actions", torch.norm(action))
+        print("Actions", torch.mean(torch.cat(ep_actions),dim=0))
         #print("Actions: ",ep_actions[-1],'\n')
         cum_rwd = []
         cum_vel = []

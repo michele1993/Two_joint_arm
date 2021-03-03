@@ -20,25 +20,12 @@ class Actor_NN(nn.Module):
 
     def forward(self, x):
 
-        x = self.compute_state(x)
         x = F.relu(self.l1(x))
         x = F.relu(self.l2(x))
         #x = F.relu(self.l3(x))
         x = torch.tanh(self.l4(x))
 
         return torch.cat([x[:,0:2] * 2500, torch.clip(x[:,2:3], 0) *200],dim=1)
-
-    def compute_state(self,x):
-
-        cos_t1 = torch.cos(x[:,0])
-        sin_t1 = torch.sin(x[:,0])
-        vel_t1 = x[:,2]
-
-        cos_t2 = torch.cos(x[:,1])
-        sin_t2 = torch.sin(x[:,1])
-        vel_t2 = x[:, 3]
-
-        return torch.cat([cos_t1,sin_t1,vel_t1,cos_t2,sin_t2,vel_t2,x[:,-1]], dim=1)
 
 
     def freeze_params(self):
@@ -73,7 +60,7 @@ class Actor_NN(nn.Module):
 class Critic_NN(nn.Module):
 
 
-    def __init__(self,dev,state_s = 6,a1_s =51,a2_s =1,h1_s = 400,h2_s = 300,hidden_a = 256, hidden_st = 256, Output_size = 1,ln_rate = 1e-3):
+    def __init__(self,dev,state_s = 7,a1_s = 51,a2_s = 1,h1_s = 400,h2_s = 300,hidden_a1 = 118,hidden_a2 = 56, hidden_st = 118, Output_size = 1,ln_rate = 1e-3):
 
         super().__init__()
 
@@ -82,10 +69,10 @@ class Critic_NN(nn.Module):
         self.sigma = 60
 
         self.l0s = nn.Linear(state_s,hidden_st)
-        self.l0a1 = nn.Linear(a1_s*2,hidden_a)
-        #self.l0a2 = nn.Linear(a2_s, hidden_a)
+        self.l0a1 = nn.Linear(a1_s*2,hidden_a1)
+        self.l0a2 = nn.Linear(a2_s, hidden_a2)
 
-        self.l1 = nn.Linear(hidden_st + hidden_a,h1_s)
+        self.l1 = nn.Linear(hidden_st + hidden_a1 + hidden_a2 ,h1_s)
         self.l2 = nn.Linear(h1_s,h2_s)
         self.l3 = nn.Linear(h2_s,Output_size)
 
@@ -94,33 +81,21 @@ class Critic_NN(nn.Module):
     def forward(self, s,a):
 
         # Process actions and states separately for first layer only
-        s = self.compute_state(s)
-        a1 = self.radialBasis_f(a) # ,a2
+        a1 = self.radialBasis_f(a[:,0:2]) # ,a2
+        #a1 = self.radialBasis_f(a)
 
         s = torch.relu(self.l0s(s))
         a1 = torch.relu(self.l0a1(a1))
-        #a2 = torch.relu(self.l0a2(a2))
-        #a = torch.sigmoid(self.l0a(a))
+        a2 = torch.sigmoid(self.l0a2(a[:,2:])) # use a sigmoid for decay_rate since doesn't use receptive field for it
 
-        #x = torch.cat([s,a1,a2],dim=1)
-        x = torch.cat([s, a1], dim=1)
+        x = torch.cat([s,a1,a2],dim=1)
+        #x = torch.cat([s, a1], dim=1)
         x = F.relu(self.l1(x))
         x = F.relu(self.l2(x))
         x = self.l3(x)
 
         return x
 
-    def compute_state(self, s):
-
-        cos_t1 = torch.cos(s[:, 0])
-        sin_t1 = torch.sin(s[:, 0])
-        vel_t1 = s[:, 2]
-
-        cos_t2 = torch.cos(s[:, 1])
-        sin_t2 = torch.sin(s[:, 1])
-        vel_t2 = s[:, 3]
-
-        return torch.cat([cos_t1, sin_t1, vel_t1, cos_t2, sin_t2, vel_t2], dim=1)
 
     def radialBasis_f(self,a):
 

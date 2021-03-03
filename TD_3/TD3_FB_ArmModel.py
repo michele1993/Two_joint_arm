@@ -105,9 +105,9 @@ class FB_Par_Arm_model:
     def step(self, action,t):
 
         action = torch.unsqueeze(action,dim=2) # need to increase dim to fit dynamical system parallel operations
+
         u = action[:,0:2]
-        #c_decay = action[:,2:3]
-        c_decay = torch.zeros((1,1,1)).to(self.dev) # DELETE!!!
+        c_decay = action[:,2:3]
 
         # Compute 4 different slopes to perfom the update
 
@@ -129,16 +129,29 @@ class FB_Par_Arm_model:
 
         if t < self.t_window:
 
-            return self.c_x, torch.zeros(self.n_arms,1).to(self.dev), torch.zeros(self.n_arms,1).to(self.dev)
+            return self.compute_state(self.c_x), torch.zeros(self.n_arms,1).to(self.dev), torch.zeros(self.n_arms,1).to(self.dev)
         else:
 
-            return self.c_x, self.compute_distance(self.c_x), self.compute_vel(self.c_x)
+            return self.compute_state(self.c_x), self.compute_distance(self.c_x), self.compute_vel(self.c_x)
 
     def reset(self):
 
         self.c_x = self.x0
 
-        return self.x0
+        return self.compute_state(self.x0)
+
+    # This method computes the state space to be fed to the actor and critic
+    def compute_state(self, x):
+
+        cos_t1 = torch.cos(x[:, 0])
+        sin_t1 = torch.sin(x[:, 0])
+        vel_t1 = x[:, 2]
+
+        cos_t2 = torch.cos(x[:, 1])
+        sin_t2 = torch.sin(x[:, 1])
+        vel_t2 = x[:, 3]
+
+        return torch.cat([cos_t1, sin_t1, vel_t1, cos_t2, sin_t2, vel_t2], dim=1)
 
     def compute_distance(self,y): # based on average distance of last five points from target
 
@@ -164,7 +177,6 @@ class FB_Par_Arm_model:
         return (vel[1:, :, :] - vel[:-1, :, :]) / t_step
 
 
-
     # The following methods are useful for computing features of the arm (e.g. position, velocity etc.)
 
     def convert_coord(self, theta1, theta2):
@@ -176,7 +188,6 @@ class FB_Par_Arm_model:
         return [x, y]
 
     def armconfig_coord(self, theta1, theta2):
-
 
         # if theta is a scalar then can't use len() so set it to single coordinate (x,y)
         if isinstance(theta1, (list, np.ndarray)):

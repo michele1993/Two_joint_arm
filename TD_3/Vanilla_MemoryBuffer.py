@@ -5,7 +5,7 @@ import numpy as np
 
 class V_Memory_B:
 
-    def __init__(self,n_arms,dev,a_space= 3,s_space = 8,batch_size = 64,size = 200000):
+    def __init__(self,n_arms,dev,a_space= 3,s_space = 7,batch_size = 64,size = 200000):
 
         self.size = size
         self.batch_size = batch_size
@@ -16,10 +16,10 @@ class V_Memory_B:
         self.dev = dev
 
         # Intialise Tensor buffer for each compotent on CPU to avoid running out of memory
-        self.c_state_buf = torch.zeros(self.size,n_arms,s_space,1).to(self.dev)
+        self.c_state_buf = torch.zeros(self.size,n_arms,s_space).to(self.dev)
         self.actions_buf = torch.zeros(self.size,n_arms,a_space).to(self.dev)
         self.rwd_buf = torch.zeros(self.size,n_arms,1).to(self.dev)
-        self.n_state_buf = torch.zeros(self.size,n_arms,s_space,1).to(self.dev)
+        self.n_state_buf = torch.zeros(self.size,n_arms,s_space).to(self.dev)
         self.done_buf = torch.zeros(self.size,n_arms).to(self.dev)
 
 
@@ -45,11 +45,11 @@ class V_Memory_B:
         indx = torch.randint(0,indx_upper_b,(self.batch_size,)).to(self.dev)
 
         # Sample corresponding transition
-        spl_c_state = self.c_state_buf[indx,:].view(-1,self.s_space,1).to('cuda:0')
-        spl_a = self.actions_buf[indx,:].view(-1,self.a_space).to('cuda:0')
-        spl_rwd = self.rwd_buf[indx,:].view(-1,1).to('cuda:0')
-        spl_n_state = self.n_state_buf[indx,:].view(-1,self.s_space,1).to('cuda:0')
-        spl_done = self.done_buf[indx,:].view(-1,1).to('cuda:0')
+        spl_c_state = self.c_state_buf[indx,:].view(-1,self.s_space)#.to('cuda:0')
+        spl_a = self.actions_buf[indx,:].view(-1,self.a_space)#.to('cuda:0')
+        spl_rwd = self.rwd_buf[indx,:].view(-1,1)#.to('cuda:0')
+        spl_n_state = self.n_state_buf[indx,:].view(-1,self.s_space) #.to('cuda:0')
+        spl_done = self.done_buf[indx,:].view(-1,1)#.to('cuda:0')
 
         return spl_c_state, spl_a, spl_rwd, spl_n_state, spl_done
 
