@@ -18,10 +18,10 @@ buffer_size = 100000
 batch_size = 100 #  number of transition bataches (i.e. n_arms) sampled from buffer
 start_update = 50
 actor_update = 2
-ln_rate_c = 0.002#0.00002
-ln_rate_a = 0.001#0.00001
-decay_upd = 0.0005# 0.05
-std = 0.25#1
+ln_rate_c = 0.00002
+ln_rate_a = 0.00001
+decay_upd = 0.05# 0.05
+std = 1
 beta = 0.6# 0.05# 0.4
 action_space = 3 # two torques + decay
 state_space = 7 # cosine, sine and angular vel of two torques + time
@@ -29,7 +29,7 @@ state_space = 7 # cosine, sine and angular vel of two torques + time
 # Simulation parameters
 n_RK_steps = 100
 t_print = 50
-n_arms = 10
+n_arms = 1
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape for dynamical system
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
@@ -89,9 +89,11 @@ for ep in range(1,n_episodes):
 
         det_action = agent(c_state).detach()
         stocasticity = torch.randn(n_arms,action_space).to(dev) * std
-        #stocasticity = torch.cat([stocasticity[:,0:2], torch.clip(stocasticity[:,2:3],0)],dim=1)
 
-        action = det_action + stocasticity
+        Q_action = det_action + torch.cat([stocasticity[:,0:2], stocasticity[:,2:].clamp(0)],dim=1) # saved action in small range
+
+        action = torch.cat([det_action[:,0:2] *2500, det_action[:,2:3] * 200],dim=1) + stocasticity
+
 
         n_state,sqrd_dist, sqrd_vel = env.step(action,t)
 
@@ -102,14 +104,14 @@ for ep in range(1,n_episodes):
         ep_rwd.append(torch.mean(torch.sqrt(sqrd_dist)))
         ep_vel.append(torch.mean(torch.sqrt(sqrd_vel)))
 
-        buffer.store_transition(c_state,action,rwd,n_state,dn[t_counter].expand(n_arms))
+        buffer.store_transition(c_state,Q_action,rwd,n_state,dn[t_counter].expand(n_arms))
         c_state = n_state
         t_counter+=1
 
         ep_actions.append(torch.mean(action,dim=0,keepdim=True))
 
         # Check if it's time to update
-        if  ep > start_update and step % 3 == 0: #t%25 == 0 and
+        if  ep > start_update: #and step % 3 == 0: #t%25 == 0 and
 
             critic_loss1,_,actor_loss = td3.update(step)
             cum_critc_loss.append(critic_loss1.detach())
