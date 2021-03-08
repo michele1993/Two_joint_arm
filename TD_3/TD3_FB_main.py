@@ -18,10 +18,10 @@ buffer_size = 100000
 batch_size = 100 #  number of transition bataches (i.e. n_arms) sampled from buffer
 start_update = 50
 actor_update = 2
-ln_rate_c = 0.00001
-ln_rate_a = 0.00001
+ln_rate_c = 0.000001
+ln_rate_a = 0.000001
 decay_upd = 0.005# 0.05
-std = 0.1
+std = 1
 beta = 0.6# 0.05# 0.4
 action_space = 3 # two torques + decay
 state_space = 7 # cosine, sine and angular vel of two torques + time
@@ -94,9 +94,9 @@ for ep in range(1,n_episodes):
 
         Q_action = det_action + torch.cat([stocasticity[:,0:2], stocasticity[:,2:].clamp(0)],dim=1) # saved action in small range
 
-        #action = torch.cat([det_action[:,0:2] * 2500, det_action[:,2:3] * 200],dim=1) + stocasticity
+        action = torch.cat([det_action[:,0:2] * 2500, det_action[:,2:3] * 200],dim=1) + stocasticity
 
-        action = torch.cat([Q_action[:, 0:2] * 2500, Q_action[:, 2:3] * 200], dim=1)
+        #action = torch.cat([Q_action[:, 0:2] * 2500, Q_action[:, 2:3] * 200], dim=1)
 
         n_state,sqrd_dist, sqrd_vel = env.step(action,t)
 

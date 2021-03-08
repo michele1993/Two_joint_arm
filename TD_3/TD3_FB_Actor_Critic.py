@@ -58,12 +58,20 @@ class Actor_NN(nn.Module):
 class Critic_NN(nn.Module):
 
 
-    def __init__(self,dev,state_s = 7,a_s = 3,h1_s = 56,h2_s = 56, Output_size = 1,ln_rate = 1e-3):
+    def __init__(self,dev,state_s = 7,a1_s = 50,a2_s = 20,h1_s = 56,h2_s = 56, Output_size = 1,ln_rate = 1e-3):
 
         super().__init__()
 
+        # Initialise mean values for RBF receptive field, based on min/max control signal
+        self.mu_s1 = torch.linspace(-2.5,2.5,a1_s).view(1,1,-1).repeat(1,2,1).to(dev) # use this shape for parallelisation, 2 is the size of actions
+        #self.sigma1 = 0.06
+        self.sigma1 = 0.01
 
-        self.l1 = nn.Linear(state_s + a_s ,h1_s)
+        self.mu_s2 = torch.linspace(0,2.5,a2_s).view(1,1,-1).to(dev)
+        #self.sigma2 = 0.075
+        self.sigma2 = 0.01
+
+        self.l1 = nn.Linear(state_s + a1_s*2 + a2_s ,h1_s)
         self.l2 = nn.Linear(h1_s,h2_s)
         self.l3 = nn.Linear(h2_s,Output_size)
 
@@ -71,7 +79,10 @@ class Critic_NN(nn.Module):
 
     def forward(self, s,a):
 
-        x = torch.cat([s, a], dim=1)
+        a1 = self.radialBasis_f(a[:,0:2],self.mu_s1,self.sigma1)
+        a2 = self.radialBasis_f(a[:,2:],self.mu_s2, self.sigma2)
+
+        x = torch.cat([s, a1,a2], dim=1)
         x = F.relu(self.l1(x))
         x = F.relu(self.l2(x))
         x = self.l3(x)
