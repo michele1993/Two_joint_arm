@@ -79,13 +79,12 @@ class Critic_NN(nn.Module):
         return x
 
 
-    def radialBasis_f(self,a):
+    def radialBasis_f(self,x, mu_s, sigma):
 
-        x = a[:,0:2].unsqueeze(2)
-        batch_s = a.size()[0]
-        rpt_field = torch.exp(-0.5*((x - self.mu_s)**2)/self.sigma)
+        batch_s = x.size()[0]
+        rpt_field = torch.exp(-0.5*((x.unsqueeze(2) - mu_s)**2)/sigma)
 
-        return rpt_field.view(batch_s,-1) #, a[:,2:3]
+        return rpt_field.view(batch_s,-1)
 
 
     def freeze_params(self):
