@@ -6,8 +6,8 @@ from TD_3.Vanilla_MemoryBuffer import V_Memory_B
 import numpy as np
 
 
-dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-#dev2 = torch.device('cpu')
+#dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+dev = torch.device('cpu')
 dev2 = dev
 
 
@@ -18,9 +18,9 @@ buffer_size = 100000
 batch_size = 100 #  number of transition bataches (i.e. n_arms) sampled from buffer
 start_update = 50
 actor_update = 2
-ln_rate_c = 0.001
-ln_rate_a = 0.001
-decay_upd = 0.05# 0.05
+ln_rate_c = 0.00001
+ln_rate_a = 0.00001
+decay_upd = 0.005# 0.05
 std = 0.1
 beta = 0.6# 0.05# 0.4
 action_space = 3 # two torques + decay

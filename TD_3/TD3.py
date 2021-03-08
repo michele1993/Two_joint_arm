@@ -57,12 +57,12 @@ class TD3:
         tot_batch_size = optimal_a.size()
 
         # Add noise to optimal action:
-        optimal_a = optimal_a + (torch.randn(tot_batch_size) * self.t_pol_noise).clamp(-self.t_clip_noise,self.t_clip_noise).to(self.dev) # based on stable baselines hyper-params
-
+        a_noise = (torch.randn(tot_batch_size) * self.t_pol_noise).to(self.dev)
+        a_noise = torch.cat([a_noise[:,0:2].clamp(-self.t_clip_noise,self.t_clip_noise), a_noise[:,2:].clamp(0,self.t_clip_noise)],dim=1)
+        optimal_a = optimal_a + a_noise # based on stable baselines hyper-params
 
         # Select min target for each batch
         target = torch.min(self.critic_target_1(spl_n_state,optimal_a), self.critic_target_2(spl_n_state,optimal_a))
-
 
         # Compute two Q target value
         Q_target = spl_rwd + spl_done * self.discount * target  # estimate maxQ given optimal action at next state in reply
