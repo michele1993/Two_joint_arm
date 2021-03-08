@@ -60,13 +60,16 @@ class Actor_NN(nn.Module):
 class Critic_NN(nn.Module):
 
 
-    def __init__(self,dev,state_s = 7,a1_s = 51,a2_s = 1,h1_s = 400,h2_s = 300,hidden_a1 = 118,hidden_a2 = 56, hidden_st = 118, Output_size = 1,ln_rate = 1e-3):
+    def __init__(self,dev,state_s = 7,a1_s = 51,a2_s = 20,h1_s = 400,h2_s = 300,hidden_a1 = 118,hidden_a2 = 56, hidden_st = 256, Output_size = 1,ln_rate = 1e-3):
 
         super().__init__()
 
         # Initialise mean values for RBF receptive field, based on min/max control signal
-        self.mu_s = torch.linspace(-2500,2500,a1_s).view(1,1,-1).repeat(1,2,1).to(dev) # use this shape for parallelisation, 2 is the size of actions
-        self.sigma = 60
+        self.mu_s1 = torch.linspace(-2500,2500,a1_s).view(1,1,-1).repeat(1,2,1).to(dev) # use this shape for parallelisation, 2 is the size of actions
+        self.sigma1 = 200
+
+        self.mu_s2 = torch.linspace(0,200,20).view(1,1,-1).to(dev)
+        self.sigma2 = 20
 
         self.l0s = nn.Linear(state_s,hidden_st)
         self.l0a1 = nn.Linear(a1_s*2,hidden_a1)
@@ -80,13 +83,14 @@ class Critic_NN(nn.Module):
 
     def forward(self, s,a):
 
-        # Process actions and states separately for first layer only
-        a1 = self.radialBasis_f(a[:,0:2]) # ,a2
-        #a1 = self.radialBasis_f(a)
+        # Apply receptive field to two types of actions
+        a1 = self.radialBasis_f(a[:,0:2],self.mu_s1, self.sigma1)
+        a2 = self.radialBasis_f(a[:,2:], self.mu_s2, self.sigma2)
 
-        s = torch.relu(self.l0s(s))
-        a1 = torch.relu(self.l0a1(a1))
-        a2 = torch.sigmoid(self.l0a2(a[:,2:])) # use a sigmoid for decay_rate since doesn't use receptive field for it
+        # Process actions and states separately for first layer only
+        s = F.relu(self.l0s(s))
+        a1 = F.relu(self.l0a1(a1))
+        a2 = F.relu(self.l0a2(a2)) # use a sigmoid for decay_rate since doesn't use receptive field for it
 
         x = torch.cat([s,a1,a2],dim=1)
         #x = torch.cat([s, a1], dim=1)
@@ -97,11 +101,10 @@ class Critic_NN(nn.Module):
         return x
 
 
-    def radialBasis_f(self,a):
+    def radialBasis_f(self,x, mu_s, sigma):
 
-        x = a[:,0:2].unsqueeze(2)
-        batch_s = a.size()[0]
-        rpt_field = torch.exp(-0.5*((x - self.mu_s)**2)/self.sigma)
+        batch_s = x.size()[0]
+        rpt_field = torch.exp(-0.5*((x.unsqueeze(2) - mu_s)**2)/sigma)
 
         return rpt_field.view(batch_s,-1) #, a[:,2:3]
 
@@ -115,7 +118,7 @@ class Critic_NN(nn.Module):
 
     def update(self, target, estimate):
 
-        loss = torch.mean((target - estimate)**2)
+        loss = F.mse_loss(target,estimate)
         self.optimiser.zero_grad()
         loss.backward() #needed for the actor
         self.optimiser.step()

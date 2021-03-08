@@ -26,6 +26,13 @@ class V_Memory_B:
 
     def store_transition(self,c_state,action,rwd,n_state,dn):
 
+        print(c_state.size())
+        print(action.size())
+        print(rwd.size())
+        print(n_state.size())
+        print(dn.size())
+        exit()
+
         # Determine indx for buffer, based on ratio n of stored steps vs size
         c_idx = self.c_size % self.size # this is 0 whenever buffer completed
 
@@ -45,11 +52,11 @@ class V_Memory_B:
         indx = torch.randint(0,indx_upper_b,(self.batch_size,)).to(self.dev)
 
         # Sample corresponding transition
-        spl_c_state = self.c_state_buf[indx,:].view(-1,self.s_space)#.to('cuda:0')
-        spl_a = self.actions_buf[indx,:].view(-1,self.a_space)#.to('cuda:0')
-        spl_rwd = self.rwd_buf[indx,:].view(-1,1)#.to('cuda:0')
-        spl_n_state = self.n_state_buf[indx,:].view(-1,self.s_space) #.to('cuda:0')
-        spl_done = self.done_buf[indx,:].view(-1,1)#.to('cuda:0')
+        spl_c_state = self.c_state_buf[indx,:].view(-1,self.s_space).to('cuda:0')
+        spl_a = self.actions_buf[indx,:].view(-1,self.a_space).to('cuda:0')
+        spl_rwd = self.rwd_buf[indx,:].view(-1,1).to('cuda:0')
+        spl_n_state = self.n_state_buf[indx,:].view(-1,self.s_space) .to('cuda:0')
+        spl_done = self.done_buf[indx,:].view(-1,1).to('cuda:0')
 
         return spl_c_state, spl_a, spl_rwd, spl_n_state, spl_done
 

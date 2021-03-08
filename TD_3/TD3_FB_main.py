@@ -7,8 +7,8 @@ import numpy as np
 
 
 dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-#dev2 = torch.device('cpu')
-dev2 = dev
+dev2 = torch.device('cpu')
+#dev2 = dev
 
 
 
@@ -18,10 +18,10 @@ buffer_size = 100000
 batch_size = 100 #  number of transition bataches (i.e. n_arms) sampled from buffer
 start_update = 50
 actor_update = 2
-ln_rate_c = 0.002#0.00002
-ln_rate_a = 0.001#0.00001
-decay_upd = 0.0005# 0.05
-std = 0.25#1
+ln_rate_c = 0.00004#0.00002
+ln_rate_a = 0.00002#0.00001
+decay_upd = 0.05
+std = 1
 beta = 0.6# 0.05# 0.4
 action_space = 3 # two torques + decay
 state_space = 7 # cosine, sine and angular vel of two torques + time
@@ -29,11 +29,11 @@ state_space = 7 # cosine, sine and angular vel of two torques + time
 # Simulation parameters
 n_RK_steps = 100
 t_print = 50
-n_arms = 10
+n_arms = 500
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape for dynamical system
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
-f_points = 11
+f_points = 15
 t_range = torch.linspace(tspan[0] + t_step, tspan[1], n_RK_steps).to(dev) # time values for simulations
 
 # Compute t at which t_window starts
@@ -109,13 +109,15 @@ for ep in range(1,n_episodes):
         ep_actions.append(torch.mean(action,dim=0,keepdim=True))
 
         # Check if it's time to update
-        if  ep > start_update and step % 3 == 0: #t%25 == 0 and
+        if  ep > start_update:# and step % 10 == 0: #t%25 == 0 and
 
             critic_loss1,_,actor_loss = td3.update(step)
             cum_critc_loss.append(critic_loss1.detach())
             cum_actor_loss.append(actor_loss.detach())
 
-        step +=1
+        step += 1
+
+
 
     cum_rwd.append(sum(ep_rwd[-f_points:])/(f_points))
     cum_vel.append(sum(ep_vel[-f_points:])/(f_points))
