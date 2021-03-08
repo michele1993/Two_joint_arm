@@ -6,7 +6,7 @@ import torch.optim as opt
 
 class Actor_NN(nn.Module):
 
-    def __init__(self,n_arms, Input_size=7, h1_size=400,h2_size=300, Output_size=3,ln_rate = 1e-3):
+    def __init__(self,n_arms, Input_size=7, h1_size=56,h2_size=56, Output_size=3,ln_rate = 1e-3):
 
         super().__init__()
 
@@ -58,23 +58,18 @@ class Actor_NN(nn.Module):
 class Critic_NN(nn.Module):
 
 
-    def __init__(self,dev,state_s = 7,a_s = 3,h1_s = 400,h2_s = 300,hidden_a = 118, hidden_st = 256, Output_size = 1,ln_rate = 1e-3):
+    def __init__(self,dev,state_s = 7,a_s = 3,h1_s = 56,h2_s = 56, Output_size = 1,ln_rate = 1e-3):
 
         super().__init__()
 
-        self.l0s = nn.Linear(state_s,hidden_st)
-        self.l0a = nn.Linear(a_s,hidden_a)
 
-        self.l1 = nn.Linear(hidden_st + hidden_a ,h1_s)
+        self.l1 = nn.Linear(state_s + a_s ,h1_s)
         self.l2 = nn.Linear(h1_s,h2_s)
         self.l3 = nn.Linear(h2_s,Output_size)
 
         self.optimiser = opt.Adam(self.parameters(),ln_rate)
 
     def forward(self, s,a):
-
-        s = torch.relu(self.l0s(s))
-        a = torch.relu(self.l0a(a))
 
         x = torch.cat([s, a], dim=1)
         x = F.relu(self.l1(x))

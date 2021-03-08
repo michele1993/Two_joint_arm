@@ -12,9 +12,13 @@ class TD3:
         self.t_clip_noise = t_noise_clip
 
         self.actor = actor
+        self.actor.apply(self.xavier_w_init)
 
         self.critic_1 = critic1
+        self.critic_1.apply(self.xavier_w_init)
+
         self.critic_2 = critic2
+        self.critic_2.apply(self.xavier_w_init)
 
         # Initialise Memory Buffer
         self.MBuffer = buffer
@@ -35,6 +39,13 @@ class TD3:
         self.target_agent.freeze_params()
 
 
+    def xavier_w_init(self, l):
+
+        if type(l) == nn.Linear:
+            nn.init.xavier_normal_(l.weight)
+            l.bias.data.fill_(0.01)
+
+
     def update(self,step):
 
         # Randomly sample batch of transitions from buffer
@@ -46,11 +57,11 @@ class TD3:
         tot_batch_size = optimal_a.size()
 
         # Add noise to optimal action:
-        optimal_a = optimal_a + (torch.rand(tot_batch_size) * self.t_pol_noise).clamp(-self.t_clip_noise,self.t_clip_noise).to(self.dev) # based on stable baselines hyper-params
+        optimal_a = optimal_a + (torch.randn(tot_batch_size) * self.t_pol_noise).clamp(-self.t_clip_noise,self.t_clip_noise).to(self.dev) # based on stable baselines hyper-params
 
 
         # Select min target for each batch
-        target = torch.minimum(self.critic_target_1(spl_n_state,optimal_a), self.critic_target_2(spl_n_state,optimal_a))
+        target = torch.min(self.critic_target_1(spl_n_state,optimal_a), self.critic_target_2(spl_n_state,optimal_a))
 
 
         # Compute two Q target value

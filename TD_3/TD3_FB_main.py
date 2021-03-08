@@ -21,7 +21,7 @@ actor_update = 2
 ln_rate_c = 0.00002
 ln_rate_a = 0.00001
 decay_upd = 0.05# 0.05
-std = 1
+std = 0.1
 beta = 0.6# 0.05# 0.4
 action_space = 3 # two torques + decay
 state_space = 7 # cosine, sine and angular vel of two torques + time
@@ -33,7 +33,7 @@ n_arms = 1
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape for dynamical system
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
-f_points = 11
+f_points = 15
 t_range = torch.linspace(tspan[0] + t_step, tspan[1], n_RK_steps).to(dev) # time values for simulations
 
 # Compute t at which t_window starts
@@ -75,6 +75,8 @@ ep_actions = []
 # Initialise t0 for each arm
 t0 = torch.tensor([tspan[0]]).expand(n_arms,1).to(dev)
 
+#dn = torch.ones(n_arms).to(dev)
+
 for ep in range(1,n_episodes):
 
 
@@ -105,6 +107,7 @@ for ep in range(1,n_episodes):
         ep_vel.append(torch.mean(torch.sqrt(sqrd_vel)))
 
         buffer.store_transition(c_state,Q_action,rwd,n_state,dn[t_counter].expand(n_arms))
+        #buffer.store_transition(c_state, Q_action, rwd, n_state, dn)
         c_state = n_state
         t_counter+=1
 
