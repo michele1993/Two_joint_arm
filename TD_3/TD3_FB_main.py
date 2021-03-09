@@ -19,11 +19,10 @@ buffer_size = 1000000
 batch_size = 100 #  number of transition bataches (i.e. n_arms) sampled from buffer
 start_update = 50
 actor_update = 2
-ln_rate_c = 0.001 #0.000001
-ln_rate_a = 0.001 #0.000001
+ln_rate_c = 0.0000001
+ln_rate_a = 0.0000001
 decay_upd = 0.005# 0.005
 std = 1
-beta = 0.6# 0.05# 0.4
 action_space = 3 # two torques + decay
 state_space = 7 # cosine, sine and angular vel of two torques + time
 
@@ -36,6 +35,7 @@ x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial conditi
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
 f_points = 15
 t_range = torch.linspace(tspan[0] + t_step, tspan[1], n_RK_steps).to(dev) # time values for simulations
+beta = 0.6# 0.05# 0.4
 
 # Compute t at which t_window starts
 t_window = (n_RK_steps-f_points) / n_RK_steps * tspan[-1]
@@ -91,10 +91,13 @@ for ep in range(1,n_episodes):
     for t in t_range:
 
         det_action = agent(c_state).detach()
+
         stocasticity = torch.randn(n_arms,action_space).to(dev) * std
 
+        # Compute action to save in the buffer
         Q_action = det_action + torch.cat([stocasticity[:,0:2], stocasticity[:,2:].clamp(0)],dim=1) # saved action in small range
 
+        # Scale actions by max value to feed to arm model
         action = torch.cat([det_action[:,0:2] * 2500, det_action[:,2:3] * 200],dim=1) + stocasticity
 
         #action = torch.cat([Q_action[:, 0:2] * 2500, Q_action[:, 2:3] * 200], dim=1)

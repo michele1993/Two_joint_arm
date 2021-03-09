@@ -64,12 +64,12 @@ class Critic_NN(nn.Module):
 
         # Initialise mean values for RBF receptive field, based on min/max control signal
         self.mu_s1 = torch.linspace(-2.5,2.5,a1_s).view(1,1,-1).repeat(1,2,1).to(dev) # use this shape for parallelisation, 2 is the size of actions
-        #self.sigma1 = 0.06
-        self.sigma1 = 0.01
+        self.sigma1 = 0.06
+        #self.sigma1 = 0.01
 
         self.mu_s2 = torch.linspace(0,2.5,a2_s).view(1,1,-1).to(dev)
-        #self.sigma2 = 0.075
-        self.sigma2 = 0.01
+        self.sigma2 = 0.075
+        #self.sigma2 = 0.01
 
         self.l1 = nn.Linear(state_s + a1_s*2 + a2_s ,h1_s)
         self.l2 = nn.Linear(h1_s,h2_s)

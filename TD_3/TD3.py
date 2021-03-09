@@ -13,12 +13,15 @@ class TD3:
 
         self.actor = actor
         self.actor.apply(self.xavier_w_init)
+        #self.actor.apply(self.small_weight_init)
 
         self.critic_1 = critic1
         self.critic_1.apply(self.xavier_w_init)
+        # self.critic_1.apply(self.small_weight_init)
 
         self.critic_2 = critic2
         self.critic_2.apply(self.xavier_w_init)
+        # self.critic_2.apply(self.small_weight_init)
 
         # Initialise Memory Buffer
         self.MBuffer = buffer
@@ -42,8 +45,16 @@ class TD3:
     def xavier_w_init(self, l):
 
         if type(l) == nn.Linear:
-            nn.init.xavier_normal_(l.weight)
-            l.bias.data.fill_(0.01)
+            nn.init.xavier_normal_(l.weight, gain=0.00001)
+            l.bias.data.fill_(0)
+
+    # small initialisation
+
+    def small_weight_init(self,l):
+
+        if isinstance(l,nn.Linear):
+            nn.init.normal_(l.weight,mean=0,std=0.001)
+            nn.init.constant(l.bias,0)
 
 
     def update(self,step):
