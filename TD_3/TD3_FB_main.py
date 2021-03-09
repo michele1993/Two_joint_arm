@@ -5,6 +5,7 @@ from TD_3.Vanilla_MemoryBuffer import V_Memory_B
 
 import numpy as np
 
+torch.manual_seed(0) # FIX SEED
 
 #dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 dev = torch.device('cpu')
@@ -13,14 +14,14 @@ dev2 = dev
 
 
 #TD_3 parameters:
-n_episodes = 10000
-buffer_size = 100000
+n_episodes = 50000
+buffer_size = 1000000
 batch_size = 100 #  number of transition bataches (i.e. n_arms) sampled from buffer
 start_update = 50
 actor_update = 2
-ln_rate_c = 0.000001
-ln_rate_a = 0.000001
-decay_upd = 0.005# 0.05
+ln_rate_c = 0.001 #0.000001
+ln_rate_a = 0.001 #0.000001
+decay_upd = 0.005# 0.005
 std = 1
 beta = 0.6# 0.05# 0.4
 action_space = 3 # two torques + decay

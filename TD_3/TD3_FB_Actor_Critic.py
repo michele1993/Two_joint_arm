@@ -6,7 +6,7 @@ import torch.optim as opt
 
 class Actor_NN(nn.Module):
 
-    def __init__(self,n_arms, Input_size=7, h1_size=56,h2_size=56, Output_size=3,ln_rate = 1e-3):
+    def __init__(self,n_arms, Input_size=7, h1_size=256,h2_size=256, Output_size=3,ln_rate = 1e-3):
 
         super().__init__()
 
@@ -58,7 +58,7 @@ class Actor_NN(nn.Module):
 class Critic_NN(nn.Module):
 
 
-    def __init__(self,dev,state_s = 7,a1_s = 50,a2_s = 20,h1_s = 56,h2_s = 56, Output_size = 1,ln_rate = 1e-3):
+    def __init__(self,dev,state_s = 7,a1_s = 50,a2_s = 20,h1_s = 256,h2_s = 256, Output_size = 1,ln_rate = 1e-3):
 
         super().__init__()
 
