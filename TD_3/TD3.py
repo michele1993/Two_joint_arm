@@ -12,7 +12,7 @@ class TD3:
         self.t_clip_noise = t_noise_clip
 
         self.actor = actor
-        self.actor.apply(self.xavier_w_init)
+        #self.actor.apply(self.xavier_w_init)
         #self.actor.apply(self.small_weight_init)
 
         self.critic_1 = critic1
