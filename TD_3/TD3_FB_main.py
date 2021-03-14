@@ -2,7 +2,6 @@ from TD_3.TD3_FB_Actor_Critic import *
 from TD_3.TD3_FB_ArmModel import FB_Par_Arm_model
 from TD_3.TD3 import TD3
 from TD_3.Vanilla_MemoryBuffer import V_Memory_B
-
 import numpy as np
 
 torch.manual_seed(0) # FIX SEED
@@ -17,14 +16,15 @@ dev2 = dev
 n_episodes = 50000
 buffer_size = 1000000
 batch_size = 100 #  number of transition bataches (i.e. n_arms) sampled from buffer
-start_update = 50
+start_update = 0#0
 actor_update = 2
-ln_rate_c = 0.0000001
-ln_rate_a = 0.0000001
+ln_rate_c = 0.0000005 #0.0005
+ln_rate_a = 0.0000005 # 0.0005
 decay_upd = 0.005# 0.005
-std = 1
+std = 0.01
 action_space = 3 # two torques + decay
 state_space = 7 # cosine, sine and angular vel of two torques + time
+lamb = 0#3
 
 # Simulation parameters
 n_RK_steps = 100
@@ -35,7 +35,9 @@ x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial conditi
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
 f_points = 15
 t_range = torch.linspace(tspan[0] + t_step, tspan[1], n_RK_steps).to(dev) # time values for simulations
-beta = 0.6# 0.05# 0.4
+beta = 0.8# 0.05# 0.4
+max_decay = 200
+max_u = 2500
 
 # Compute t at which t_window starts
 t_window = (n_RK_steps-f_points) / n_RK_steps * tspan[-1]
@@ -50,8 +52,8 @@ env = FB_Par_Arm_model(t_step,x0,goal,t_window,dev,n_arms=n_arms)
 #Initialise actor and critic
 agent = Actor_NN(n_arms,ln_rate = ln_rate_a).to(dev)
 
-critic_1 = Critic_NN(dev,ln_rate=ln_rate_c).to(dev)
-critic_2 = Critic_NN(dev,ln_rate=ln_rate_c).to(dev)
+critic_1 = Critic_NN(lamb,dev,ln_rate=ln_rate_c).to(dev)
+critic_2 = Critic_NN(lamb,dev,ln_rate=ln_rate_c).to(dev)
 
 #Initialise Buffer:
 buffer = V_Memory_B(n_arms,dev2, batch_size=batch_size,size=buffer_size)
@@ -90,17 +92,24 @@ for ep in range(1,n_episodes):
 
     for t in t_range:
 
-        det_action = agent(c_state).detach()
+        if ep < start_update:
 
-        stocasticity = torch.randn(n_arms,action_space).to(dev) * std
+            a1 = -2 * torch.rand((n_arms,action_space-1)) +1
+            Q_action = torch.cat([a1, torch.rand((n_arms,1))],dim=1)
 
-        # Compute action to save in the buffer
-        Q_action = det_action + torch.cat([stocasticity[:,0:2], stocasticity[:,2:].clamp(0)],dim=1) # saved action in small range
+        else:
+
+            det_action = agent(c_state).detach()
+            stocasticity = torch.randn(n_arms,action_space).to(dev) * std
+
+            # Compute action to save in the buffer
+            Q_action = det_action + torch.cat([stocasticity[:, 0:2], stocasticity[:, 2:].clamp(0)],dim=1)  # saved action in small range
+
 
         # Scale actions by max value to feed to arm model
-        action = torch.cat([det_action[:,0:2] * 2500, det_action[:,2:3] * 200],dim=1) + stocasticity
+        #action = torch.cat([det_action[:,0:2] * 2500, det_action[:,2:3] * 200],dim=1) + stocasticity
 
-        #action = torch.cat([Q_action[:, 0:2] * 2500, Q_action[:, 2:3] * 200], dim=1)
+        action = torch.cat([Q_action[:, 0:2] * max_u, Q_action[:, 2:3] * max_decay], dim=1)
 
         n_state,sqrd_dist, sqrd_vel = env.step(action,t)
 
@@ -111,9 +120,11 @@ for ep in range(1,n_episodes):
         ep_rwd.append(torch.mean(torch.sqrt(sqrd_dist)))
         ep_vel.append(torch.mean(torch.sqrt(sqrd_vel)))
 
+
         buffer.store_transition(c_state,Q_action,rwd,n_state,dn[t_counter].expand(n_arms))
         #buffer.store_transition(c_state, Q_action, rwd, n_state, dn)
         c_state = n_state
+
         t_counter+=1
 
         ep_actions.append(torch.mean(action,dim=0,keepdim=True))
@@ -142,7 +153,10 @@ for ep in range(1,n_episodes):
         print("Aver final vel: ", sum(cum_vel)/t_print)
         print("Critic loss: ", sum(cum_critc_loss)/(t_print*n_RK_steps))
         print("Actor loss", sum(cum_actor_loss)*2 / (t_print*n_RK_steps))
-        print("Actions", torch.mean(torch.cat(ep_actions),dim=0))
+        max_a,_ = torch.max(torch.cat(ep_actions),dim=0)
+        print("Max actions",max_a )
+        min_a,_ = torch.min(torch.cat(ep_actions), dim=0)
+        print("Min actions", min_a)
         #print("Actions: ",ep_actions[-1],'\n')
         cum_rwd = []
         cum_vel = []
