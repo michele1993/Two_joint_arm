@@ -13,7 +13,7 @@ class TD3:
 
         self.actor = actor
         #self.actor.apply(self.xavier_w_init)
-        #self.actor.apply(self.small_weight_init)
+        self.actor.apply(self.small_weight_init)
 
         self.critic_1 = critic1
         self.critic_1.apply(self.xavier_w_init)

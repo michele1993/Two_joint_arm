@@ -73,6 +73,10 @@ cum_actor_loss = []
 
 ep_actions = []
 
+
+max_ang_v = []
+min_ang_v = []
+
 # Initialise t0 for each arm
 t0 = torch.tensor([tspan[0]]).expand(n_arms,1).to(dev)
 
@@ -87,6 +91,8 @@ for ep in range(1,n_episodes):
     ep_rwd = []
     ep_vel = []
     step = 1
+
+    ang_vel = []
 
     for t in t_range:
 
@@ -117,6 +123,7 @@ for ep in range(1,n_episodes):
         t_counter+=1
 
         ep_actions.append(torch.mean(action,dim=0,keepdim=True))
+        ang_vel.append(n_state[:,[2,3]])
 
         # Check if it's time to update
         if  ep > start_update: #and step % 3 == 0: #t%25 == 0 and
@@ -130,6 +137,11 @@ for ep in range(1,n_episodes):
     cum_rwd.append(sum(ep_rwd[-f_points:])/(f_points))
     cum_vel.append(sum(ep_vel[-f_points:])/(f_points))
 
+    max_ang,_ = torch.max(torch.cat(ang_vel),dim=0)
+    min_ang, _ = torch.min(torch.cat(ang_vel), dim=0)
+    max_ang_v.append(max_ang)
+    min_ang_v.append(min_ang)
+
 
 
     # cum_rwd.append(sum(ep_rwd)/n_RK_steps)
@@ -142,10 +154,13 @@ for ep in range(1,n_episodes):
         print("Aver final vel: ", sum(cum_vel)/t_print)
         print("Critic loss: ", sum(cum_critc_loss)/(t_print*n_RK_steps))
         print("Actor loss", sum(cum_actor_loss)*2 / (t_print*n_RK_steps))
-        print("Actions", torch.mean(torch.cat(ep_actions),dim=0))
-        #print("Actions: ",ep_actions[-1],'\n')
+        print(" Max ang vel: ", torch.mean(torch.cat(max_ang_v),dim=0))
+        print(" Min ang vel: ", torch.mean(torch.cat(min_ang_v), dim=0))
         cum_rwd = []
         cum_vel = []
         cum_critc_loss = []
         cum_actor_loss = []
         ep_actions = []
+
+        min_ang_v=[]
+        max_ang_v = []
