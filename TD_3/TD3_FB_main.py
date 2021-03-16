@@ -24,7 +24,7 @@ decay_upd = 0.005# 0.005
 std = 0.01
 action_space = 3 # two torques + decay
 state_space = 7 # cosine, sine and angular vel of two torques + time
-lamb = 0#3
+lamb = 50000 # 100000 not learning anything # 1000
 
 # Simulation parameters
 n_RK_steps = 100

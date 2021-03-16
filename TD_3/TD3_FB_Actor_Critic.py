@@ -85,8 +85,8 @@ class Critic_NN(nn.Module):
         #     exit()
 
         #c = x
-        #x = F.relu(x) * torch.exp(-self.lamb * (x)**2)
-        x = F.relu(x) * torch.exp(-self.lamb * (x))
+        x = F.relu(x) * torch.exp(-self.lamb * (x)**2)
+        #x = F.relu(x) * torch.exp(-self.lamb * (x))
 
         # if torch.sum(torch.isnan(x)) > 0:
         #     print(c[torch.isnan(x)])
@@ -107,8 +107,8 @@ class Critic_NN(nn.Module):
         #     print(F.relu(x)[torch.isnan(F.relu(x))])
         #     exit()
 
-        #x = F.relu(x) * torch.exp(-self.lamb * (x)**2)
-        x = F.relu(x) * torch.exp(-self.lamb * (x))
+        x = F.relu(x) * torch.exp(-self.lamb * (x)**2)
+        #x = F.relu(x) * torch.exp(-self.lamb * (x))
 
         x = self.l3(x)
 
