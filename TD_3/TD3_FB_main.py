@@ -7,9 +7,9 @@ import numpy as np
 
 torch.manual_seed(0) # FIX SEED
 
-#dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-dev = torch.device('cpu')
-dev2 = dev
+dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+dev2 = torch.device('cpu')
+#dev2 = dev
 
 
 
@@ -28,8 +28,8 @@ state_space = 7 # cosine, sine and angular vel of two torques + time
 
 # Simulation parameters
 n_RK_steps = 100
-t_print = 50
-n_arms = 1
+t_print = 10
+n_arms = 100
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape for dynamical system
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
