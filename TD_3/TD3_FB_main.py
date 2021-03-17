@@ -28,7 +28,7 @@ state_space = 7 # cosine, sine and angular vel of two torques + time
 
 # Simulation parameters
 n_RK_steps = 100
-t_print = 10
+t_print = 50
 n_arms = 100
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape for dynamical system
@@ -36,6 +36,8 @@ t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
 f_points = 15
 t_range = torch.linspace(tspan[0] + t_step, tspan[1], n_RK_steps).to(dev) # time values for simulations
 beta = 0.8# 0.05# 0.4
+max_u = 5000#2500
+max_decay = 200
 
 # Compute t at which t_window starts
 t_window = (n_RK_steps-f_points) / n_RK_steps * tspan[-1]
@@ -106,7 +108,7 @@ for ep in range(1,n_episodes):
         # Scale actions by max value to feed to arm model
         #action = torch.cat([det_action[:,0:2] * 2500, det_action[:,2:3] * 200],dim=1) + stocasticity
 
-        action = torch.cat([Q_action[:, 0:2] * 2500, Q_action[:, 2:3] * 200], dim=1)
+        action = torch.cat([Q_action[:, 0:2] * max_u, Q_action[:, 2:3] * max_decay], dim=1)
 
         n_state,sqrd_dist, sqrd_vel = env.step(action,t)
 
@@ -156,6 +158,10 @@ for ep in range(1,n_episodes):
         print("Actor loss", sum(cum_actor_loss)*2 / (t_print*n_RK_steps))
         print(" Max ang vel: ", torch.mean(torch.cat(max_ang_v),dim=0))
         print(" Min ang vel: ", torch.mean(torch.cat(min_ang_v), dim=0))
+        max_a,_ = torch.max(torch.cat(ep_actions),dim=0)
+        print("Max actions",max_a )
+        min_a,_ = torch.min(torch.cat(ep_actions), dim=0)
+        print("Min actions", min_a)
         cum_rwd = []
         cum_vel = []
         cum_critc_loss = []
