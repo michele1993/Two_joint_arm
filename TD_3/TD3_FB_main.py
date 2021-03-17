@@ -16,7 +16,7 @@ dev2 = dev
 n_episodes = 50000
 buffer_size = 1000000
 batch_size = 100 #  number of transition bataches (i.e. n_arms) sampled from buffer
-start_update = 0#0
+start_update = 50#0
 actor_update = 2
 ln_rate_c = 0.0000005 #0.0005
 ln_rate_a = 0.0000005 # 0.0005
@@ -24,7 +24,7 @@ decay_upd = 0.005# 0.005
 std = 0.01
 action_space = 3 # two torques + decay
 state_space = 7 # cosine, sine and angular vel of two torques + time
-lamb = 50000 # 100000 not learning anything # 1000
+lamb = 0# 50000 # 100000 not learning anything # 1000
 
 # Simulation parameters
 n_RK_steps = 100
@@ -92,18 +92,12 @@ for ep in range(1,n_episodes):
 
     for t in t_range:
 
-        if ep < start_update:
 
-            a1 = -2 * torch.rand((n_arms,action_space-1)) +1
-            Q_action = torch.cat([a1, torch.rand((n_arms,1))],dim=1)
+        det_action = agent(c_state).detach()
+        stocasticity = torch.randn(n_arms,action_space).to(dev) * std
 
-        else:
-
-            det_action = agent(c_state).detach()
-            stocasticity = torch.randn(n_arms,action_space).to(dev) * std
-
-            # Compute action to save in the buffer
-            Q_action = det_action + torch.cat([stocasticity[:, 0:2], stocasticity[:, 2:].clamp(0)],dim=1)  # saved action in small range
+        # Compute action to save in the buffer
+        Q_action = det_action + torch.cat([stocasticity[:, 0:2], stocasticity[:, 2:].clamp(0)],dim=1)  # saved action in small range
 
 
         # Scale actions by max value to feed to arm model
