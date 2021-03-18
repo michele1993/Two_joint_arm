@@ -92,22 +92,23 @@ class TD3:
 
         actor_loss = torch.tensor(0)
 
-        Q_size = Q_estimate_1.size()[0]
+        # Q_size = Q_estimate_1.size()[0]
+        #
+        # intervalns = torch.linspace(0, Q_size, self.batch_s +1)[:-1]
+        #
+        # rand_values = torch.randint(self.batch_s-1,(self.batch_s,))
+        #
+        # actor_indx = (intervalns + rand_values).long()
 
-        intervalns = torch.linspace(0, Q_size, self.batch_s +1)[:-1]
-
-        rand_values = torch.randint(self.batch_s-1,(self.batch_s,))
-
-        actor_indx = (intervalns + rand_values).long()
 
 
         # Update actor based on first critic
         if step % self.actor_update == 0:
 
-            actor_s = spl_c_state[actor_indx]
+            #actor_s = spl_c_state[actor_indx]
 
-            #actor_loss = self.critic_1(spl_c_state, self.actor(spl_c_state)) # loss for actor based on first critic only
-            actor_loss = self.critic_1(actor_s, self.actor(actor_s))
+            actor_loss = self.critic_1(spl_c_state, self.actor(spl_c_state)) # loss for actor based on first critic only
+            #actor_loss = self.critic_1(actor_s, self.actor(actor_s))
 
             actor_loss = self.actor.update(actor_loss)
 

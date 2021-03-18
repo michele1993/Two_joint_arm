@@ -7,28 +7,27 @@ import numpy as np
 
 torch.manual_seed(0) # FIX SEED
 
-dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-dev2 = torch.device('cpu')
-#dev2 = dev
+#dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+dev = torch.device('cpu')
+dev2 = dev
 
 
 #TD_3 parameters:
 n_episodes = 50000
 buffer_size = 50000
 batch_size = 100 #  number of transition bataches (i.e. n_arms) sampled from buffer
-start_update = 50
+start_update = 500
 actor_update = 2
 ln_rate_c = 0.0000005
 ln_rate_a = 0.0000005
 decay_upd = 0.005# 0.005
-std = 0.01#0.0005
 action_space = 3 # two torques + decay
 state_space = 7 # cosine, sine and angular vel of two torques + time
 
 # Simulation parameters
 n_RK_steps = 100
 t_print = 50
-n_arms = 1 #500
+n_arms = 1
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape for dynamical system
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
@@ -97,8 +96,18 @@ for ep in range(1,n_episodes):
 
     for t in t_range:
 
-        det_action = agent(c_state).detach()
+        if ep < start_update:
 
+            std = 0.5
+            td3.actor_update = 30
+
+        else:
+
+            std = 0.01
+            td3.actor_update = 2
+
+
+        det_action = agent(c_state).detach()
         stocasticity = torch.randn(n_arms,action_space).to(dev) * std
 
         # Compute action to save in the buffer
@@ -127,7 +136,7 @@ for ep in range(1,n_episodes):
         ang_vel.append(n_state[:,[2,3]])
 
         # Check if it's time to update
-        if  ep > start_update: #and step % 3 == 0: #t%25 == 0 and
+        if  ep > 50: #and step % 3 == 0: #t%25 == 0 and
 
             critic_loss1,_,actor_loss = td3.update(step)
             cum_critc_loss.append(critic_loss1.detach())
