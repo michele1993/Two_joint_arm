@@ -12,31 +12,30 @@ dev2 = torch.device('cpu')
 #dev2 = dev
 
 
-
 #TD_3 parameters:
 n_episodes = 50000
-buffer_size = 1000000
+buffer_size = 50000
 batch_size = 100 #  number of transition bataches (i.e. n_arms) sampled from buffer
 start_update = 50
 actor_update = 2
 ln_rate_c = 0.0000005
 ln_rate_a = 0.0000005
 decay_upd = 0.005# 0.005
-std = 0.01
+std = 0.01#0.0005
 action_space = 3 # two torques + decay
 state_space = 7 # cosine, sine and angular vel of two torques + time
 
 # Simulation parameters
 n_RK_steps = 100
 t_print = 50
-n_arms = 100
+n_arms = 1 #500
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape for dynamical system
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
 f_points = 15
 t_range = torch.linspace(tspan[0] + t_step, tspan[1], n_RK_steps).to(dev) # time values for simulations
-beta = 0.8# 0.05# 0.4
-max_u = 5000#2500
+beta = 0.8 #
+max_u = 2500
 max_decay = 200
 
 # Compute t at which t_window starts
@@ -110,7 +109,7 @@ for ep in range(1,n_episodes):
 
         action = torch.cat([Q_action[:, 0:2] * max_u, Q_action[:, 2:3] * max_decay], dim=1)
 
-        n_state,sqrd_dist, sqrd_vel = env.step(action,t)
+        n_state, sqrd_dist, sqrd_vel = env.step(action,t)
 
         n_state = torch.cat([n_state,t.expand(n_arms,1)],dim=1) # add time value to state
 
