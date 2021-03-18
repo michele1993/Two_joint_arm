@@ -35,6 +35,21 @@ class TD3:
         self.target_agent.freeze_params()
 
 
+    def xavier_w_init(self, l):
+
+        if type(l) == nn.Linear:
+            nn.init.xavier_normal_(l.weight, gain=0.00001)
+            l.bias.data.fill_(0)
+
+    # small initialisation
+
+    def small_weight_init(self,l):
+
+        if isinstance(l,nn.Linear):
+            nn.init.normal_(l.weight,mean=0,std=0.001)
+            nn.init.constant(l.bias,0)
+
+
     def update(self,step):
 
         # Randomly sample batch of transitions from buffer
