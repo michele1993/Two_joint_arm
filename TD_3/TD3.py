@@ -54,7 +54,7 @@ class TD3:
     def small_weight_init(self,l):
 
         if isinstance(l,nn.Linear):
-            nn.init.normal_(l.weight,mean=0,std=0.001)
+            nn.init.normal_(l.weight,mean=0,std=0.01) #std=0.001
             nn.init.constant(l.bias,0)
 
 

@@ -14,9 +14,9 @@ dev2 = dev
 
 #TD_3 parameters:
 n_episodes = 50000
-buffer_size = 50000
+buffer_size = 400000
 batch_size = 100 #  number of transition bataches (i.e. n_arms) sampled from buffer
-start_update = 500
+start_update = 5000
 actor_update = 2
 ln_rate_c = 0.0000005
 ln_rate_a = 0.0000005
@@ -98,8 +98,8 @@ for ep in range(1,n_episodes):
 
         if ep < start_update:
 
-            std = 0.5
-            td3.actor_update = 30
+            std = 0.1
+            td3.actor_update = 10
 
         else:
 
