@@ -16,7 +16,7 @@ dev2 = dev
 n_episodes = 50000
 buffer_size = 1000000
 batch_size = 100 #  number of transition bataches (i.e. n_arms) sampled from buffer
-start_update = 50#0
+start_update = 5000#0
 actor_update = 2
 ln_rate_c = 0.0000005 #0.0005
 ln_rate_a = 0.0000005 # 0.0005
@@ -92,6 +92,16 @@ for ep in range(1,n_episodes):
 
     for t in t_range:
 
+        if ep < start_update:
+
+            std = 0.1
+            td3.actor_update = 10
+
+        else:
+
+            std = 0.01
+            td3.actor_update = 2
+
 
         det_action = agent(c_state).detach()
         stocasticity = torch.randn(n_arms,action_space).to(dev) * std
@@ -124,7 +134,7 @@ for ep in range(1,n_episodes):
         ep_actions.append(torch.mean(action,dim=0,keepdim=True))
 
         # Check if it's time to update
-        if  ep > start_update: #and step % 3 == 0: #t%25 == 0 and
+        if  ep > 50: #and step % 3 == 0: #t%25 == 0 and
 
             critic_loss1,_,actor_loss = td3.update(step)
             cum_critc_loss.append(critic_loss1.detach())
