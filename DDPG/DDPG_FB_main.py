@@ -29,7 +29,7 @@ n_arms = 1#3000
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape for dynamical system
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
-f_points = 11
+f_points = 100 # 11
 t_range = torch.linspace(tspan[0], tspan[1] - t_step, n_RK_steps).to(dev) # time values for simulations
 
 # Compute t at which t_window starts

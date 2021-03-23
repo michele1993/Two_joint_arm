@@ -2,7 +2,7 @@ from TD_3.TD3_FB_Actor_Critic import *
 
 class TD3:
 
-    def __init__(self,actor,critic1,critic2,buffer,decay_upd,n_arms,dev, t_policy_noise=0.2,t_noise_clip=0.5 ,actor_update=2,discount=0.99):
+    def __init__(self,actor,critic1,critic2,buffer,decay_upd,dev, t_policy_noise=0.2,t_noise_clip=0.5 ,actor_update=2,discount=1):
 
         self.dev = dev
         self.discount = torch.tensor(discount).to(self.dev)
@@ -12,51 +12,27 @@ class TD3:
         self.t_clip_noise = t_noise_clip
 
         self.actor = actor
-        #self.actor.apply(self.xavier_w_init)
-        self.actor.apply(self.small_weight_init)
 
         self.critic_1 = critic1
-        self.critic_1.apply(self.xavier_w_init)
-        # self.critic_1.apply(self.small_weight_init)
-
         self.critic_2 = critic2
-        self.critic_2.apply(self.xavier_w_init)
-        # self.critic_2.apply(self.small_weight_init)
 
         # Initialise Memory Buffer
         self.MBuffer = buffer
 
-        lamb = critic1.lamb
-
         # Initialise the first target critic target NN
-        self.critic_target_1 = Critic_NN(lamb,dev).to(self.dev)
+        self.critic_target_1 = Critic_NN(dev).to(self.dev)
         self.critic_target_1.load_state_dict(self.critic_1.state_dict()) # Make sure two critic NN have the same initial parameters
         self.critic_target_1.freeze_params()# Freeze the critic target NN parameter
 
         # Initialise the second target critic target NN
-        self.critic_target_2 = Critic_NN(lamb, dev).to(self.dev)
+        self.critic_target_2 = Critic_NN(dev).to(self.dev)
         self.critic_target_2.load_state_dict(self.critic_2.state_dict()) # Make sure two critic NN have the same initial parameters
         self.critic_target_2.freeze_params()# Freeze the critic target NN parameter
 
         #Do the same for actor
-        self.target_agent = Actor_NN(n_arms).to(self.dev)
+        self.target_agent = Actor_NN().to(self.dev)
         self.target_agent.load_state_dict(self.actor.state_dict())
         self.target_agent.freeze_params()
-
-
-    def xavier_w_init(self, l):
-
-        if type(l) == nn.Linear:
-            nn.init.xavier_normal_(l.weight, gain=0.000005)
-            l.bias.data.fill_(0)
-
-    # small initialisation
-
-    def small_weight_init(self,l):
-
-        if isinstance(l,nn.Linear):
-            nn.init.normal_(l.weight,mean=0,std=0.0001)
-            nn.init.constant_(l.bias,0.001)
 
 
     def update(self,step):
@@ -70,52 +46,27 @@ class TD3:
         tot_batch_size = optimal_a.size()
 
         # Add noise to optimal action:
-        a_noise = (torch.randn(tot_batch_size) * self.t_pol_noise).to(self.dev)
-        a_noise = torch.cat([a_noise[:,0:2].clamp(-self.t_clip_noise,self.t_clip_noise), a_noise[:,2:].clamp(0,self.t_clip_noise)],dim=1)
-        optimal_a = optimal_a + a_noise # based on stable baselines hyper-params
+        optimal_a = optimal_a + (torch.rand(tot_batch_size) * self.t_pol_noise).clamp(-self.t_clip_noise,self.t_clip_noise).to(self.dev) # based on stable baselines hyper-params
+
 
         # Select min target for each batch
-        target = torch.min(self.critic_target_1(spl_n_state,optimal_a), self.critic_target_2(spl_n_state,optimal_a))
+        target = torch.minimum(self.critic_target_1(spl_n_state,optimal_a), self.critic_target_2(spl_n_state,optimal_a))
+
 
         # Compute two Q target value
         Q_target = spl_rwd + spl_done * self.discount * target  # estimate maxQ given optimal action at next state in reply
 
-        # if torch.sum(torch.isnan(spl_a)) >0:
-        #     print('spl_a')
-        #     print(spl_a)
-        #     exit()
-        #
-        # if torch.sum(torch.isnan(spl_c_state)) >0:
-        #     print('spl_state')
-        #     print(spl_c_state)
-        #     exit()
 
         # Compute Q estimate based on reply episode
         Q_estimate_1 = self.critic_1(spl_c_state,spl_a)
         Q_estimate_2 = self.critic_2(spl_c_state, spl_a)
-
-        # if torch.sum(torch.isnan(Q_estimate_1)) >0:
-        #     print('q1')
-        #     print(spl_a[torch.isnan(Q_estimate_1).squeeze(),:],'\n')
-        #     print(spl_c_state[torch.isnan(Q_estimate_1).squeeze(),:], '\n')
-        #     print(spl_c_state)
-        #
-        #     # for p in self.critic_1.parameters():
-        #     #     print(torch.sum(torch.isnan(p.data)))
-        #     exit()
 
 
         # Update critic
         critic_loss1 = self.critic_1.update(Q_target, Q_estimate_1)
         critic_loss2 = self.critic_2.update(Q_target, Q_estimate_2)
 
-        # if torch.sum(torch.isnan(critic_loss1)) >0:
-        #     print('loss1')
-        #     print(Q_estimate_1,'\n')
-
-
         actor_loss = torch.tensor(0)
-
         # Update actor based on first critic
         if step % self.actor_update == 0:
 

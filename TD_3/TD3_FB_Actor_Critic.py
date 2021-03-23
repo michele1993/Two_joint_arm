@@ -6,24 +6,37 @@ import torch.optim as opt
 
 class Actor_NN(nn.Module):
 
-    def __init__(self,n_arms, Input_size=7, h1_size=256,h2_size=256, Output_size=3,ln_rate = 1e-3):
+    def __init__(self, Input_size=6, Hidden_size=128, Output_size=3,ln_rate = 1e-3):
 
         super().__init__()
 
-        self.n_arms = n_arms
-
-        self.l1 = nn.Linear(Input_size, h1_size)
-        self.l2 = nn.Linear(h1_size, h2_size)
-        self.l3 = nn.Linear(h2_size, Output_size)
+        self.l1 = nn.Linear(Input_size, Hidden_size)
+        self.l2 = nn.Linear(Hidden_size, Hidden_size)
+        #self.l3 = nn.Linear(Hidden_size, Hidden_size)
+        self.l4 = nn.Linear(Hidden_size, Output_size)
         self.optimiser = opt.Adam(self.parameters(),ln_rate)
 
     def forward(self, x):
 
+        x = self.compute_state(x)
         x = F.relu(self.l1(x))
         x = F.relu(self.l2(x))
-        x = torch.tanh(self.l3(x))
+        #x = F.relu(self.l3(x))
+        x = self.l4(x)
 
-        return torch.cat([x[:,0:2], torch.clip(x[:,2:3], 0)],dim=1)
+        return torch.cat([x[:,0:2], torch.clip(x[:,2:3], 0,200)],dim=1)
+
+    def compute_state(self,x):
+
+        cos_t1 = torch.cos(x[:,0])
+        sin_t1 = torch.sin(x[:,0])
+        vel_t1 = x[:,2]
+
+        cos_t2 = torch.cos(x[:,1])
+        sin_t2 = torch.sin(x[:,1])
+        vel_t2 = x[:, 3]
+
+        return torch.cat([cos_t1,sin_t1,vel_t1,cos_t2,sin_t2,vel_t2], dim=1)
 
 
     def freeze_params(self):
@@ -58,69 +71,61 @@ class Actor_NN(nn.Module):
 class Critic_NN(nn.Module):
 
 
-    def __init__(self,lamb,dev,state_s = 7,a_s = 3,h1_s = 256,h2_s = 256, Output_size = 1,ln_rate = 1e-3):
+    def __init__(self,dev,state_s = 6,a1_s =5001,a2_s =1,hidden_st = 256,hidden_a = 128, Hidden_size = 256, Output_size = 1,ln_rate = 1e-3):
 
         super().__init__()
 
-        #self.lamb = 1.8
-        self.lamb = lamb
+        # Initialise mean values for RBF receptive field, based on min/max control signal
+        self.mu_s = torch.linspace(-5000,5000,a1_s).view(1,1,-1).repeat(1,2,1).to(dev) # use this shape for parallelisation, 2 is the size of actions
+        self.sigma = 5
 
-        self.l1 = nn.Linear(state_s + a_s ,h1_s)
-        self.l2 = nn.Linear(h1_s,h2_s)
-        self.l3 = nn.Linear(h2_s,Output_size)
+        self.l0s = nn.Linear(state_s,hidden_st)
+        self.l0a1 = nn.Linear(a1_s*2,hidden_st)
+        self.l0a2 = nn.Linear(a2_s, hidden_a)
+
+        self.l1 = nn.Linear(hidden_st *2 + hidden_a,Hidden_size)
+        #self.l2 = nn.Linear(Hidden_size,Hidden_size)
+        self.l3 = nn.Linear(Hidden_size,Output_size)
 
         self.optimiser = opt.Adam(self.parameters(),ln_rate)
 
     def forward(self, s,a):
 
-        x = self.l1(torch.cat([s, a], dim=1))
+        # Process actions and states separately for first layer only
+        s = self.compute_state(s)
+        a1,a2 = self.radialBasis_f(a)
 
-        # if torch.sum(torch.isnan(F.relu(x))) > 0:
-        #     print('l1')
-        #     exit()
-        #
-        # if torch.sum(torch.isnan(torch.exp(-self.lamb * x))) > 0:
-        #     print('exp_l1')
-        #     print()
-        #     exit()
+        s = torch.relu(self.l0s(s))
+        a1 = torch.relu(self.l0a1(a1))
+        a2 = torch.relu(self.l0a2(a2))
+        #a = torch.sigmoid(self.l0a(a))
 
-        #c = x
-        x = F.relu(x) #* torch.exp(-self.lamb * (x)**2)
-        #x = F.relu(x) * torch.exp(-self.lamb * (x))
-
-        # if torch.sum(torch.isnan(x)) > 0:
-        #     print(c[torch.isnan(x)])
-        #     print(F.relu(c)[torch.isnan(x)])
-        #     print(torch.exp(-self.lamb * c)[torch.isnan(x)])
-        #     print('p_l2')
-        #     exit()
-
-        x = self.l2(x)
-
-        # if torch.sum(torch.isnan(x)) > 0:
-        #     print('l2')
-        #     exit()
-        #
-        # if torch.sum(torch.isnan(F.relu(x))) > 0:
-        #     print('R_l2')
-        #     print(x[torch.isnan(F.relu(x))],'\n')
-        #     print(F.relu(x)[torch.isnan(F.relu(x))])
-        #     exit()
-
-        x = F.relu(x) #* torch.exp(-self.lamb * (x)**2)
-        #x = F.relu(x) * torch.exp(-self.lamb * (x))
-
+        x = torch.cat([s,a1,a2],dim=1)
+        x = F.relu(self.l1(x))
+        #x = F.relu(self.l2(x))
         x = self.l3(x)
 
         return x
 
+    def compute_state(self, s):
 
-    def radialBasis_f(self,x, mu_s, sigma):
+        cos_t1 = torch.cos(s[:, 0])
+        sin_t1 = torch.sin(s[:, 0])
+        vel_t1 = s[:, 2]
 
-        batch_s = x.size()[0]
-        rpt_field = torch.exp(-0.5*((x.unsqueeze(2) - mu_s)**2)/sigma)
+        cos_t2 = torch.cos(s[:, 1])
+        sin_t2 = torch.sin(s[:, 1])
+        vel_t2 = s[:, 3]
 
-        return rpt_field.view(batch_s,-1)
+        return torch.cat([cos_t1, sin_t1, vel_t1, cos_t2, sin_t2, vel_t2], dim=1)
+
+    def radialBasis_f(self,a):
+
+        x = a[:,0:2].unsqueeze(2)
+        batch_s = a.size()[0]
+        rpt_field = torch.exp(-0.5*((x - self.mu_s)**2)/self.sigma)
+
+        return rpt_field.view(batch_s,-1), a[:,2:3]
 
 
     def freeze_params(self):
