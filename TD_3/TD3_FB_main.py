@@ -6,8 +6,8 @@ import numpy as np
 
 torch.manual_seed(0) # FIX SEED
 
-#dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-dev = torch.device('cpu')
+dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+#dev = torch.device('cpu')
 dev2 = dev
 
 
@@ -29,7 +29,7 @@ lamb = 0# 50000 # 100000 not learning anything # 1000
 # Simulation parameters
 n_RK_steps = 100
 t_print = 50
-n_arms = 1
+n_arms = 1000
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape for dynamical system
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
@@ -134,7 +134,7 @@ for ep in range(1,n_episodes):
         ep_actions.append(torch.mean(action,dim=0,keepdim=True))
 
         # Check if it's time to update
-        if  ep > 50: #and step % 3 == 0: #t%25 == 0 and
+        if  ep > 1: #and step % 3 == 0: #t%25 == 0 and
 
             critic_loss1,_,actor_loss = td3.update(step)
             cum_critc_loss.append(critic_loss1.detach())
