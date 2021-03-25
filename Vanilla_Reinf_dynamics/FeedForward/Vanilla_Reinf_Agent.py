@@ -42,7 +42,7 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
 
     def update(self, dis_rwd):
 
-
+        dis_rwd = torch.sum(dis_rwd,dim=0).unsqueeze(2)
         loss = torch.sum(self.log_ps * dis_rwd.reshape(-1,1,1))# dis_rwd.reshape(-1,1) #.mean() # check that product is element-wise, may need log_ps.view(-1)
 
         self.optimiser.zero_grad()

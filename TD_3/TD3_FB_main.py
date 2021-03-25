@@ -1,7 +1,7 @@
-from Two_joint_arm.TD_3.TD3_FB_Actor_Critic import *
-from Two_joint_arm.TD_3.TD3_FB_ArmModel import FB_Par_Arm_model
-from Two_joint_arm.TD_3.TD3 import TD3
-from Two_joint_arm.TD_3.Vanilla_MemoryBuffer import V_Memory_B
+from TD_3.TD3_FB_Actor_Critic import *
+from TD_3.TD3_FB_ArmModel import FB_Par_Arm_model
+from TD_3.TD3 import TD3
+from TD_3.Vanilla_MemoryBuffer import V_Memory_B
 import torch
 import numpy as np
 
@@ -14,8 +14,8 @@ dev2 = torch.device('cpu')
 
 
 #TD_3 parameters:
-n_episodes = 50000
-buffer_size = 1000000
+n_episodes = 10000
+buffer_size = 200000
 batch_size = 64 #  number of transition bataches (i.e. n_arms) sampled from buffer
 start_update = 5000#0
 actor_update = 2
@@ -29,7 +29,7 @@ lamb = 0# 50000 # 100000 not learning anything # 1000
 
 # Simulation parameters
 n_RK_steps = 100
-t_print = 1#50
+t_print = 50
 n_arms = 1000
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape for dynamical system
@@ -74,7 +74,7 @@ cum_critc_loss = []
 
 cum_actor_loss = []
 
-ep_actions = []
+
 
 # Initialise t0 for each arm
 t0 = torch.tensor([tspan[0]]).expand(n_arms,1).to(dev)
@@ -89,19 +89,20 @@ for ep in range(1,n_episodes):
     t_counter = 0
     ep_rwd = []
     ep_vel = []
+    ep_actions = [] #only store last trajectory actionsl
     step = 1
 
     for t in t_range:
 
-        if ep < start_update:
-
-            std = 0.05
-            td3.actor_update = 5
-
-        else:
-
-            std = 0.001
-            td3.actor_update = 2
+        # if ep < start_update:
+        #
+        #     std = 0.05
+        #     td3.actor_update = 8
+        #
+        # else:
+        #
+        #     std = 0.001
+        #     td3.actor_update = 2
 
 
         det_action = agent(c_state).detach()
@@ -132,7 +133,7 @@ for ep in range(1,n_episodes):
 
         t_counter+=1
 
-        ep_actions.append(torch.mean(action,dim=0,keepdim=True))
+        ep_actions.append(torch.mean(action**2,dim=0,keepdim=True))
 
         # Check if it's time to update
         if  ep > 1: #and step % 3 == 0: #t%25 == 0 and
@@ -159,12 +160,12 @@ for ep in range(1,n_episodes):
         print("Critic loss: ", sum(cum_critc_loss)/(t_print*n_RK_steps))
         print("Actor loss", sum(cum_actor_loss)*2 / (t_print*n_RK_steps))
         max_a,_ = torch.max(torch.cat(ep_actions),dim=0)
-        print("Max actions",max_a )
-        min_a,_ = torch.min(torch.cat(ep_actions), dim=0)
-        print("Min actions", min_a)
+        print("Max absolute actions", torch.sqrt(max_a) )
+        # min_a,_ = torch.min(torch.cat(ep_actions), dim=0)
+        # print("Min actions", min_a)
         #print("Actions: ",ep_actions[-1],'\n')
         cum_rwd = []
         cum_vel = []
         cum_critc_loss = []
         cum_actor_loss = []
-        ep_actions = []
+

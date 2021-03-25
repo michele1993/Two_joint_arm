@@ -1,10 +1,10 @@
-from Two_joint_arm.TD_3.TD3_FB_Actor_Critic import *
+from TD_3.TD3_FB_Actor_Critic import *
 import torch
 import torch.nn as nn
 
 class TD3:
 
-    def __init__(self,actor,critic1,critic2,buffer,decay_upd,n_arms,dev, t_policy_noise=0.2,t_noise_clip=0.5 ,actor_update=2,discount=0.99):
+    def __init__(self,actor,critic1,critic2,buffer,decay_upd,n_arms,dev, t_policy_noise=0.2,t_noise_clip=0.5 ,actor_update=2,discount=1):
 
         self.dev = dev
         self.discount = torch.tensor(discount).to(self.dev)
@@ -119,18 +119,16 @@ class TD3:
 
 
         actor_loss = torch.tensor(0)
-        Q_size = Q_estimate_1.size()[0]
-
-        intervalns = torch.linspace(0, Q_size, self.batch_s +1)[:-1]
-
-        rand_values = torch.randint(self.batch_s-1,(self.batch_s,))
-
-        actor_indx = (intervalns + rand_values).long()
-
 
 
         # Update actor based on first critic
         if step % self.actor_update == 0:
+
+            # select smaller batch for actor
+            Q_size = Q_estimate_1.size()[0]
+            intervalns = torch.linspace(0, Q_size, self.batch_s + 1)[:-1]
+            rand_values = torch.randint(self.batch_s - 1, (self.batch_s,))
+            actor_indx = (intervalns + rand_values).long()
 
             actor_s = spl_c_state[actor_indx]
 

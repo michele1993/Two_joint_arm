@@ -47,8 +47,10 @@ for ep in range(episodes):
 
     t, thetas = training_arm.perform_reaching(t_step,actions)
 
+
     rwd = training_arm.compute_rwd(thetas,x_hat,y_hat, f_points)
     velocity = training_arm.compute_vel(thetas, f_points)
+
 
     advantage = rwd - avr_rwd
     avr_rwd += alpha * torch.mean(advantage)
