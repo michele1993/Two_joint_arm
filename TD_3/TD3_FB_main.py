@@ -1,21 +1,22 @@
-from TD_3.TD3_FB_Actor_Critic import *
-from TD_3.TD3_FB_ArmModel import FB_Par_Arm_model
-from TD_3.TD3 import TD3
-from TD_3.Vanilla_MemoryBuffer import V_Memory_B
+from Two_joint_arm.TD_3.TD3_FB_Actor_Critic import *
+from Two_joint_arm.TD_3.TD3_FB_ArmModel import FB_Par_Arm_model
+from Two_joint_arm.TD_3.TD3 import TD3
+from Two_joint_arm.TD_3.Vanilla_MemoryBuffer import V_Memory_B
+import torch
 import numpy as np
 
 torch.manual_seed(0) # FIX SEED
 
 dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-#dev = torch.device('cpu')
-dev2 = dev
+dev2 = torch.device('cpu')
+#dev2 = dev
 
 
 
 #TD_3 parameters:
 n_episodes = 50000
 buffer_size = 1000000
-batch_size = 100 #  number of transition bataches (i.e. n_arms) sampled from buffer
+batch_size = 64 #  number of transition bataches (i.e. n_arms) sampled from buffer
 start_update = 5000#0
 actor_update = 2
 ln_rate_c = 0.0000005 #0.0005
@@ -28,7 +29,7 @@ lamb = 0# 50000 # 100000 not learning anything # 1000
 
 # Simulation parameters
 n_RK_steps = 100
-t_print = 50
+t_print = 1#50
 n_arms = 1000
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape for dynamical system
@@ -94,12 +95,12 @@ for ep in range(1,n_episodes):
 
         if ep < start_update:
 
-            std = 0.1
-            td3.actor_update = 10
+            std = 0.05
+            td3.actor_update = 5
 
         else:
 
-            std = 0.01
+            std = 0.001
             td3.actor_update = 2
 
 

@@ -23,7 +23,7 @@ class Actor_NN(nn.Module):
         x = F.relu(self.l2(x))
         x = torch.tanh(self.l3(x))
 
-        return torch.cat([x[:,0:2], torch.clip(x[:,2:3], 0)],dim=1)
+        return torch.cat([x[:,0:2], torch.clamp(x[:,2:3], 0)],dim=1)
 
 
     def freeze_params(self):

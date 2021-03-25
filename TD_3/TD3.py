@@ -1,4 +1,6 @@
-from TD_3.TD3_FB_Actor_Critic import *
+from Two_joint_arm.TD_3.TD3_FB_Actor_Critic import *
+import torch
+import torch.nn as nn
 
 class TD3:
 
@@ -58,7 +60,7 @@ class TD3:
 
         if isinstance(l,nn.Linear):
             nn.init.normal_(l.weight,mean=0,std=0.0001)
-            nn.init.constant_(l.bias,0.001)
+            nn.init.normal_(l.bias,mean=0,std=.001)
 
 
     def update(self,step):
@@ -135,15 +137,13 @@ class TD3:
             #actor_loss = self.critic_1(spl_c_state, self.actor(spl_c_state)) # loss for actor based on first critic only
             actor_loss = self.critic_1(actor_s, self.actor(actor_s))
 
-            actor_loss = self.critic_1(spl_c_state, self.actor(spl_c_state)) # loss for actor based on first critic only
-
             actor_loss = self.actor.update(actor_loss)
 
             # Update target NN through polyak average
             self.target_agent.soft_update(self.actor, self.decay_upd)
 
-            self.critic_target_1.soft_update(self.critic_1, self.decay_upd)
-            self.critic_target_2.soft_update(self.critic_2, self.decay_upd)
+        self.critic_target_1.soft_update(self.critic_1, self.decay_upd)
+        self.critic_target_2.soft_update(self.critic_2, self.decay_upd)
 
 
         return critic_loss1,critic_loss2, actor_loss

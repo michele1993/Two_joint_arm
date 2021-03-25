@@ -1,10 +1,10 @@
 #!/bin/sh
 
 #PBS -l walltime=00:01:00
-#PBS -l select=1:ncpus=1:mem=10gb:ngpus=1
+#PBS -l select=1:ncpus=1:mem=1h0gb:ngpus=1
 
-# cd ${PBS_O_WORKDIR}
+cd '/home/px19783'
 
-module load lang/python/anaconda
+module load lang/python/anaconda/pytorch
 
-time python < TD3_FB_main.py
+python < Two_joint_arm/TD_3/TD3_FB_main.py
