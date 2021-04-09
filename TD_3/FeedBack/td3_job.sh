@@ -1,7 +1,7 @@
 #!/bin/sh
 
-#PBS -l walltime=02:10:00
-#PBS -l select=1:ncpus=1:mem=20gb:ngpus=1
+#PBS -l walltime=10:00:00
+#PBS -l select=1:ncpus=1:mem=90gb:ngpus=1
 
 module load lang/python/anaconda/pytorch
 

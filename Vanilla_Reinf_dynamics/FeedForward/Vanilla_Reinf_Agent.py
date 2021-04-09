@@ -31,9 +31,10 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
         sampled_as = d.sample((self.n_arms,))
         self.log_ps = d.log_prob(sampled_as)
 
-        sampled_as = torch.clip_(sampled_as,-2,2)
+        #sampled_as = torch.clip_(sampled_as,-2,2)
 
         sampled_as = self.gaussian_convol(torch.transpose(sampled_as,1,2))
+
         # print(sampled_as.size())
         # exit()
 
@@ -43,7 +44,7 @@ class Reinf_Agent(nn.Module): # inherit for easier managing of trainable paramet
     def update(self, dis_rwd):
 
         dis_rwd = torch.sum(dis_rwd,dim=0).unsqueeze(2)
-        loss = torch.sum(self.log_ps * dis_rwd.reshape(-1,1,1))# dis_rwd.reshape(-1,1) #.mean() # check that product is element-wise, may need log_ps.view(-1)
+        loss = torch.sum(self.log_ps * dis_rwd)# dis_rwd.reshape(-1,1) #.mean() # check that product is element-wise, may need log_ps.view(-1)
 
         self.optimiser.zero_grad()
         loss.backward()

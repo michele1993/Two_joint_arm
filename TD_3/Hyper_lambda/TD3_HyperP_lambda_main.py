@@ -1,7 +1,7 @@
-from TD_3.TD3_FB_Actor_Critic import *
-from TD_3.TD3_FB_ArmModel import FB_Par_Arm_model
-from TD_3.TD3 import TD3
-from TD_3.Vanilla_MemoryBuffer import V_Memory_B
+from TD_3.FeedBack.TD3_FB_Actor_Critic import *
+from TD_3.FeedBack.TD3_FB_ArmModel import FB_Par_Arm_model
+from TD_3.FeedBack.TD3 import TD3
+from TD_3.FeedBack.Vanilla_MemoryBuffer import V_Memory_B
 import numpy as np
 
 torch.manual_seed(0) # FIX SEED

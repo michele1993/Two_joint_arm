@@ -1,18 +1,19 @@
-from Parall_Arm_model import Parall_Arm_model
+from Vanilla_Reinf_dynamics.FeedForward.FF_Parall_Arm_model import Parall_Arm_model
 from Vanilla_Reinf_dynamics.FeedForward.Vanilla_Reinf_Agent import Reinf_Agent
 import torch
 #from safety_checks.Video_arm_config import Video_arm
 import numpy as np
 
+# Use REINFORCE to control arm reaches in a feedforward fashion
 
 dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 #dev = torch.device('cpu')
 
 
-episodes = 15000
+episodes = 100000
 n_RK_steps = 100
-time_window_steps = 25
+time_window_steps = 15
 n_parametrised_steps = n_RK_steps - time_window_steps
 t_print = 50
 n_arms = 5000
@@ -21,6 +22,7 @@ x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial conditi
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
 f_points = - time_window_steps #[- time_window_steps, -1] # number of final points to average across for distance to target and velocity
 vel_weight = 0.8
+ln_rate = 1
 
 
 # Target endpoint, based on matlab - reach straight in front, at shoulder height
@@ -28,7 +30,7 @@ x_hat = 0.792
 y_hat = 0
 
 training_arm = Parall_Arm_model(tspan,x0,dev, n_arms=n_arms)
-agent = Reinf_Agent(n_parametrised_steps,dev,n_arms= n_arms).to(dev)
+agent = Reinf_Agent(n_parametrised_steps,dev,n_arms= n_arms, ln_rate= ln_rate).to(dev)
 
 
 avr_rwd = 0
@@ -91,7 +93,7 @@ test_actions = torch.unsqueeze(agent.test_actions(),0).detach()
 zero_actions = torch.zeros(1,2,time_window_steps).to(dev)
 test_actions = torch.cat([test_actions,zero_actions],dim=2)
 
-torch.save(test_actions, 'Results/test_actions2_Viscosity_av_vel_20points.pt')
+torch.save(test_actions, 'test_actions2_Viscosity_av_vel_20points.pt')
 
 agent.gaussian_convol(test_actions)
 # add some zero input for extra time
@@ -100,7 +102,7 @@ agent.gaussian_convol(test_actions)
 t_t, t_y = test_arm.perform_reaching(t_step,test_actions)
 
 
-torch.save(t_y, 'Results/test_dynamics2_Viscosity_av_vel_20points.pt')
+torch.save(t_y, 'test_dynamics2_Viscosity_av_vel_20points.pt')
 
 
 tst_accuracy = test_arm.compute_rwd(t_y,x_hat,y_hat,f_points)

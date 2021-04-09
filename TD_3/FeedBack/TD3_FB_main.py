@@ -1,7 +1,7 @@
-from TD_3.TD3_FB_Actor_Critic import *
-from TD_3.TD3_FB_ArmModel import FB_Par_Arm_model
-from TD_3.TD3 import TD3
-from TD_3.Vanilla_MemoryBuffer import V_Memory_B
+from TD_3.FeedBack.TD3_FB_Actor_Critic import *
+from TD_3.FeedBack.TD3_FB_ArmModel import FB_Par_Arm_model
+from TD_3.FeedBack.TD3 import TD3
+from TD_3.FeedBack.Vanilla_MemoryBuffer import V_Memory_B
 import torch
 import numpy as np
 
@@ -18,7 +18,7 @@ n_episodes = 10000
 buffer_size = 200000
 batch_size = 64 #  number of transition bataches (i.e. n_arms) sampled from buffer
 start_update = 5000#0
-actor_update = 2
+actor_update = 7
 ln_rate_c = 0.0000005 #0.0005
 ln_rate_a = 0.0000005 # 0.0005
 decay_upd = 0.005# 0.005
@@ -30,7 +30,7 @@ lamb = 0# 50000 # 100000 not learning anything # 1000
 # Simulation parameters
 n_RK_steps = 100
 t_print = 50
-n_arms = 1000
+n_arms = 5000
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape for dynamical system
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
@@ -136,7 +136,7 @@ for ep in range(1,n_episodes):
         ep_actions.append(torch.mean(action**2,dim=0,keepdim=True))
 
         # Check if it's time to update
-        if  ep > 1: #and step % 3 == 0: #t%25 == 0 and
+        if  ep > 50: #and step % 3 == 0: #t%25 == 0 and
 
             critic_loss1,_,actor_loss = td3.update(step)
             cum_critc_loss.append(critic_loss1.detach())
