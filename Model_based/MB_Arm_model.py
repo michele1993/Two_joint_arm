@@ -1,13 +1,17 @@
 import numpy as np
 import torch
+import torch.nn as nn
 
 
 
 
 
-class FF_Parall_Arm_model:
+class FF_Parall_Arm_model(nn.Module):
 
-    def __init__(self,tspan,x0,dev, n_arms=10, height=1.8, mass=80):
+    def __init__(self,trainable,tspan,x0,dev, n_arms=10, height=1.8, mass=80):
+
+        super().__init__()
+
 
         self.dev = dev
         # Simulation parameters
@@ -39,8 +43,19 @@ class FF_Parall_Arm_model:
         I1 = m1 * (self.l1 * 0.322) ** 2  # with respect to center of mass of arm
         I2 = m2 * (self.l2 * 0.468) ** 2  # with respect to center of mass of forearm
 
-        self.alpha = m1 * lc1**2 + I1 + m2 * lc2**2 + I2 + m2* self.l1**2
-        self.omega = 2 * m2 * self.l1 * lc2
+
+
+        if trainable:
+
+            self.alpha = nn.Parameter(torch.rand(1))
+            self.omega = nn.Parameter(torch.rand(1))
+
+        else:
+
+            self.alpha = m1 * lc1 ** 2 + I1 + m2 * lc2 ** 2 + I2 + m2 * self.l1 ** 2
+            self.omega = 2 * m2 * self.l1 * lc2
+
+
 
         M22 = torch.Tensor([m2 * lc2 ** 2 + I2]).to(self.dev)
         self.M22 = M22.repeat(self.n_arms,1)

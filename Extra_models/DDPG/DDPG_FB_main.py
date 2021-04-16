@@ -1,7 +1,7 @@
-from DDPG.DDPG_FB_Actor_Critic import *
-from DDPG.DDPG_FB_ArmModel import FB_Par_Arm_model
-from DDPG.DDPG_alg import DDPG
-from DDPG.Vanilla_MemoryBuffer import V_Memory_B
+from Extra_models.DDPG.DDPG_FB_Actor_Critic import *
+from Extra_models.DDPG.DDPG_FB_ArmModel import FB_Par_Arm_model
+from Extra_models.DDPG.DDPG_alg import DDPG
+from Extra_models.DDPG.Vanilla_MemoryBuffer import V_Memory_B
 
 import numpy as np
 

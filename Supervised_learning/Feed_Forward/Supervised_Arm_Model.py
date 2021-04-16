@@ -116,13 +116,13 @@ class Spvsd_Arm_model:
 
         for it in range(n_iterations):
 
-            #y.append(c_y)
             #store gradient for each output used in the time window
             # if it <= str_wind:
             #     y.append(c_y.detach().clone()) # store intermediate values, but without keeping track of gradient for each
             # else:
             #     y.append(c_y.clone())
 
+            y.append(c_y)
             # Compute 4 different slopes, k, for initial point, to perform one-step update according to RK4 implementation
 
             k1 = self.dynamical_system(c_y,u[:,:,it:it+1]) # use it:it+1 to keep the dim of original tensor without slicing it
@@ -154,7 +154,7 @@ class Spvsd_Arm_model:
 
         [x_c, y_c] = self.convert_coord(y[f_points:, :, 0], y[f_points:, :, 1])
 
-        return (x_hat - x_c)**2 , (y_hat - y_c)**2 #torch.sqrt()# maintain original dimension for product with log_p
+        return (x_hat - x_c)**2 + (y_hat - y_c)**2 #torch.sqrt()# maintain original dimension for product with log_p
 
     def compute_vel(self,y, f_points):
 
@@ -166,7 +166,7 @@ class Spvsd_Arm_model:
         dx = - self.l1 * torch.sin(t1) * dt1 - self.l2 * (dt1+dt2) * torch.sin((t1+t2 ))
         dy = self.l1 * torch.cos(t1) * dt1 + self.l2 * (dt1 + dt2) * torch.cos((t1 + t2))
 
-        return dx**2, dy**2 #torch.sqrt() # maintain original dimension to sum with rwd
+        return dx**2 + dy**2 #torch.sqrt() # maintain original dimension to sum with rwd
 
     def compute_accel(self, vel, t_step):
 

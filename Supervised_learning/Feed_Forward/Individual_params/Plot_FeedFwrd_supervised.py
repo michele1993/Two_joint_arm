@@ -1,6 +1,4 @@
-from Supervised_learning.Feed_Forward.Decay.Spvsd_Decay_Arm_Model import Spvsd_Decay_Arm_model
-from Supervised_learning.Feed_Forward.Supervised_Arm_Model import Spvsd_Arm_model
-from Supervised_learning.Feed_Forward.Decay.Spvsd_Exp_TimeDecay_Arm_Model import Spvsd_ExpDecay_Arm_model
+from Supervised_learning.Feed_Forward.Individual_params.Decay.Spvsd_Exp_TimeDecay_Arm_Model import Spvsd_ExpDecay_Arm_model
 from safety_checks.Video_arm_config import Video_arm
 import torch
 import numpy as np

@@ -1,4 +1,4 @@
-from DDPG.DDPG_FB_Actor_Critic import *
+from Extra_models.DDPG.DDPG_FB_Actor_Critic import *
 
 class DDPG:
 

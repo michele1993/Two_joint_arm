@@ -4,7 +4,7 @@ import torch.optim as opt
 from torch.distributions import Normal
 
 
-# create agent using REINFORCE
+# create agent using REINFORCE, with one parameter for each time step for each torque
 
 class Reinf_Agent(nn.Module): # inherit for easier managing of trainable parameters
 

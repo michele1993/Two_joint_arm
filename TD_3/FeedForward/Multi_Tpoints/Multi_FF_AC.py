@@ -78,7 +78,7 @@ class Actor_NN(nn.Module):
 class Critic_NN(nn.Module):
 
 
-    def __init__(self,n_arms,dev,input_size = 202,h1_s = 256,h2_s = 256, Output_size = 1,ln_rate = 1e-3):
+    def __init__(self,n_arms,dev,input_size = 202,h1_s = 400,h2_s = 300,h3_s=300, Output_size = 1,ln_rate = 1e-3):
 
         super().__init__()
 
@@ -87,8 +87,9 @@ class Critic_NN(nn.Module):
         self.dev = dev
 
         self.l1 = nn.Linear(input_size,h1_s)
-        #self.l2 = nn.Linear(h1_s,h2_s)
-        self.l3 = nn.Linear(h2_s,Output_size)
+        self.l2 = nn.Linear(h1_s,h2_s)
+        self.l3 = nn.Linear(h2_s,h3_s)
+        self.l4 = nn.Linear(h3_s,Output_size)
 
         self.optimiser = opt.Adam(self.parameters(),ln_rate)
 
@@ -98,25 +99,12 @@ class Critic_NN(nn.Module):
             s = s.repeat(self.n_arms,1).to(self.dev)
 
         x = F.relu(self.l1(torch.cat([s, a], dim=1)))
+        x = F.relu(self.l2(x))
+        x = F.relu(self.l3(x))
 
-        #x = F.relu(self.l2(x))
-
-        x = self.l3(x)
+        x = self.l4(x)
 
         return x
-
-
-    def small_weight_init(self,l):
-
-        if isinstance(l,nn.Linear):
-            nn.init.normal_(l.weight,mean=0,std= 0.001)# std= 0.00005
-            nn.init.normal_(l.bias,mean=0,std= 0)# std= 0.00005
-
-    def xavier_w_init(self, l):
-
-        if type(l) == nn.Linear:
-            nn.init.xavier_normal_(l.weight, gain=0.001)
-            l.bias.data.fill_(0)
 
 
     def radialBasis_f(self,x, mu_s, sigma):

@@ -1,5 +1,5 @@
 from Supervised_learning.Feed_Forward.Supervised_Arm_Model import Spvsd_Arm_model
-from Supervised_learning.Feed_Forward.Supervised_agent import S_Agent
+from Supervised_learning.Feed_Forward.Individual_params.Supervised_agent import S_Agent
 import numpy as np
 import torch
 
