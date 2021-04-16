@@ -156,7 +156,7 @@ class Parall_Arm_model:
         #[x_c, y_c] = self.convert_coord(y[-1:, :,0], y[-1:,:, 1])
         [x_c, y_c] = self.convert_coord(y[f_points:, :, 0], y[f_points:, :, 1])
 
-        return (x_hat - x_c)**2 , (y_hat - y_c)**2 #torch.sqrt()# maintain original dimension for product with log_p
+        return (x_hat - x_c)**2 + (y_hat - y_c)**2 #torch.sqrt()# maintain original dimension for product with log_p
 
     def compute_vel(self,y, f_points):
 
@@ -168,7 +168,7 @@ class Parall_Arm_model:
         dx = - self.l1 * torch.sin(t1) * dt1 - self.l2 * (dt1+dt2) * torch.sin((t1+t2 ))
         dy = self.l1 * torch.cos(t1) * dt1 + self.l2 * (dt1 + dt2) * torch.cos((t1 + t2))
 
-        return dx**2, dy**2 #torch.sqrt() # maintain original dimension to sum with rwd
+        return dx**2 + dy**2 #torch.sqrt() # maintain original dimension to sum with rwd
 
     def compute_accel(self, vel, t_step):
 

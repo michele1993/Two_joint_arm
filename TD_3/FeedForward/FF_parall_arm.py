@@ -1,12 +1,11 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
 import torch
 
 
 
 
-class Spvsd_Arm_model:
+
+class FF_Parall_Arm_model:
 
     def __init__(self,tspan,x0,dev, n_arms=10, height=1.8, mass=80):
 
@@ -106,23 +105,20 @@ class Spvsd_Arm_model:
 
 
 
-    def perform_reaching(self, t_step,u):#,str_wind
+    def perform_reaching(self, t_step,u):
 
         n_iterations = int((self.tspan[1] - self.tspan[0]) / t_step)
 
         y = []
-        c_y = self.x0 #.clone() # need to detach ? No if you wanna differentiate through RK
-
+        c_y = self.x0.clone() # need to detach ? No if you wanna differentiate through RK
+        c_t = 0
+        t = []
+        t.append(c_t)
 
         for it in range(n_iterations):
 
-            #store gradient for each output used in the time window
-            # if it <= str_wind:
-            #     y.append(c_y.detach().clone()) # store intermediate values, but without keeping track of gradient for each
-            # else:
-            #     y.append(c_y.clone())
+            y.append(c_y.detach().clone()) # store intermediate values, but without keeping track of gradient for each
 
-            y.append(c_y)
             # Compute 4 different slopes, k, for initial point, to perform one-step update according to RK4 implementation
 
             k1 = self.dynamical_system(c_y,u[:,:,it:it+1]) # use it:it+1 to keep the dim of original tensor without slicing it
@@ -142,16 +138,19 @@ class Spvsd_Arm_model:
             #c_y += t_step * (1/6) * (k1 + 2*k2 + 2*k3 + k4) # use w_average of the for slope to compute a slope from initial point
             c_y = c_y + t_step * (1 / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
 
+            c_t += t_step
+
+            t.append(c_t)
 
         y.append(c_y) # store final locations, which contains backward gradient, through all previous points
 
-        return torch.stack(y)
-
+        return t, torch.stack(y)
 
 
 
     def compute_rwd(self,y, x_hat,y_hat, f_points): # based on average distance of last five points from target
 
+        #[x_c, y_c] = self.convert_coord(y[-1:, :,0], y[-1:,:, 1])
         [x_c, y_c] = self.convert_coord(y[f_points:, :, 0], y[f_points:, :, 1])
 
         return (x_hat - x_c)**2 + (y_hat - y_c)**2 #torch.sqrt()# maintain original dimension for product with log_p
@@ -170,7 +169,7 @@ class Spvsd_Arm_model:
 
     def compute_accel(self, vel, t_step):
 
-        return (vel[1:,:,:] - vel[:-1,:,:])/t_step
+        return (vel[1:, :, :] - vel[:-1, :, :]) / t_step
 
 
     # The following methods are useful for computing features of the arm (e.g. position, velocity etc.)
@@ -217,50 +216,3 @@ class Spvsd_Arm_model:
         dy = self.l1 * np.cos(t1) * dt1 + self.l2 * (dt1 + dt2) * np.cos(t1 + t2)
 
         return dx, dy
-
-
-
-
-    def plot_info(self, t, thetas):
-
-
-        t = np.array(t)
-
-        theta1 = thetas[:, 0]
-        theta2 = thetas[:, 1]
-        d_theta1_dt = thetas[:, 2]
-        d_theta2_dt = thetas[:, 3]
-
-        fig1 = plt.figure()
-
-        ax1 = fig1.add_subplot(311)
-        # ax1.set(xlim=(-0.3, 0.6), ylim=(-0.6,0 ))
-
-        ax2 = fig1.add_subplot(312)
-        # ax2.set(xlim=(-0.3, 0.6), ylim=(-0.6, 0))
-
-        ax3 = fig1.add_subplot(313)
-
-
-
-        [x, y] = self.convert_coord(theta1, theta2)
-
-        config = self.armconfig_coord(theta1, theta2)
-
-
-        dx, dy = self.xy_velocity(theta1, theta2, d_theta1_dt, d_theta2_dt)
-
-        vel = np.sqrt(dx**2 + dy**2)
-        ax3.plot(t, vel)
-
-
-
-        sampled_idx = range(0, len(config[0,0,:]))
-
-        colors = cm.rainbow(np.linspace(0, 1, len(config[0,0,:])))
-
-        for i, c in zip(sampled_idx, colors):
-            ax2.plot(config[:, 0, i], config[:, 1, i], color=c)
-            ax1.plot(x[i], y[i], 'o', color=c)
-
-        plt.show()
