@@ -158,6 +158,16 @@ class Parall_Arm_model:
 
         return (x_hat - x_c)**2 + (y_hat - y_c)**2 #torch.sqrt()# maintain original dimension for product with log_p
 
+
+    # Use this method to compute rwd when have multiple tatget x_hat, y_hat
+    def multiP_compute_rwd(self,y, x_hat,y_hat, f_points):
+
+        #[x_c, y_c] = self.convert_coord(y[-1:, :,0], y[-1:,:, 1])
+        [x_c, y_c] = self.convert_coord(y[f_points:, :, 0], y[f_points:, :, 1])
+
+        return (x_hat - x_c.squeeze())**2 + (y_hat - y_c.squeeze())**2
+
+
     def compute_vel(self,y, f_points):
 
         t1 = y[f_points:, :,0] # [-1:,
@@ -167,6 +177,7 @@ class Parall_Arm_model:
 
         dx = - self.l1 * torch.sin(t1) * dt1 - self.l2 * (dt1+dt2) * torch.sin((t1+t2 ))
         dy = self.l1 * torch.cos(t1) * dt1 + self.l2 * (dt1 + dt2) * torch.cos((t1 + t2))
+
 
         return dx**2 + dy**2 #torch.sqrt() # maintain original dimension to sum with rwd
 

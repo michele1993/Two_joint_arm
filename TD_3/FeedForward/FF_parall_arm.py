@@ -53,8 +53,6 @@ class FF_Parall_Arm_model:
         np.random.seed(1)
         self.F = torch.Tensor(np.random.rand(2,2)).repeat(n_arms,1,1).to(self.dev) *15 # repeat in first dimension given n of arms
 
-
-
     def inverse_M(self, theta2): # this methods allows to compute the inverse of matrix (function) M(theta2)
 
 

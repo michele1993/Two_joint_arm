@@ -110,7 +110,7 @@ class Critic_NN(nn.Module):
 
         if isinstance(l,nn.Linear):
             nn.init.normal_(l.weight,mean=0,std= 0.001)# std= 0.00005
-            nn.init.normal_(l.bias,mean=0,std= 0)# std= 0.00005
+            l.bias.data.fill_(0)# std= 0.00005
 
     def xavier_w_init(self, l):
 

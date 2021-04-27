@@ -1,22 +1,25 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.optim as opt
 
 
 
 
 
-class FF_Parall_Arm_model(nn.Module):
+class MB_FF_Arm_model(nn.Module):
 
-    def __init__(self,trainable,tspan,x0,dev, n_arms=10, height=1.8, mass=80):
+    def __init__(self,trainable,tspan,x0,dev, n_arms=10, height=1.8, mass=80, ln_rate = 1e-3):
 
         super().__init__()
 
 
         self.dev = dev
+        self.ln_rate = ln_rate
         # Simulation parameters
         self.tspan = tspan
         self.n_arms = n_arms
+
 
         #self.x0 = torch.Tensor(x0).expand(self.n_arms,-1,-1) # -1 leaves dim unchaged, for 1d tensor, always use expand instead of repeat
 
@@ -43,18 +46,14 @@ class FF_Parall_Arm_model(nn.Module):
         I1 = m1 * (self.l1 * 0.322) ** 2  # with respect to center of mass of arm
         I2 = m2 * (self.l2 * 0.468) ** 2  # with respect to center of mass of forearm
 
-
-
         if trainable:
 
-            self.alpha = nn.Parameter(torch.rand(1))
-            self.omega = nn.Parameter(torch.rand(1))
+            self.alpha = nn.Parameter(torch.randn(1) * 0.1).to(self.dev)
+            self.omega = nn.Parameter(torch.randn(1) * 0.1).to(self.dev)
 
         else:
-
             self.alpha = m1 * lc1 ** 2 + I1 + m2 * lc2 ** 2 + I2 + m2 * self.l1 ** 2
             self.omega = 2 * m2 * self.l1 * lc2
-
 
 
         M22 = torch.Tensor([m2 * lc2 ** 2 + I2]).to(self.dev)
@@ -65,13 +64,27 @@ class FF_Parall_Arm_model(nn.Module):
         self.beta = m2 * lc2**2 + I2
         self.delta = m2 * self.l1 * lc2
 
-        np.random.seed(1)
-        self.F = torch.Tensor(np.random.rand(2,2)).repeat(n_arms,1,1).to(self.dev) *15 # repeat in first dimension given n of arms
+        if trainable:
+
+         self.F = nn.Parameter(torch.randn(2,2).to(self.dev))#.repeat(n_arms,1,1)
+
+         self.optimiser = opt.Adam(self.parameters(), ln_rate)
+
+        else:
+            np.random.seed(1)
+            self.F = torch.Tensor(np.random.rand(2,2)).to(self.dev) *15 # repeat in first dimension given n of arms
 
 
+    def update(self, target, estimate):
+
+        loss = torch.mean((target - estimate)**2)
+        self.optimiser.zero_grad()
+        loss.backward()
+        self.optimiser.step()
+
+        return loss
 
     def inverse_M(self, theta2): # this methods allows to compute the inverse of matrix (function) M(theta2)
-
 
 
         M11 = self.alpha + self.omega * torch.cos(theta2)
@@ -84,6 +97,7 @@ class FF_Parall_Arm_model(nn.Module):
 
 
     def computeC(self, theta2, d_theta1, d_theta2): # precompute the matrix (function) C(theta2, dtheta1, dtheta2)
+
 
         c = self.delta * torch.sin(theta2)
 
@@ -98,6 +112,7 @@ class FF_Parall_Arm_model(nn.Module):
 
     def dynamical_system(self,y,u): # create equivalent 1st order dynamical system of equations to be passed to solve_ivp
 
+
         inv_MM = self.inverse_M(y[:,1])
 
         CC = self.computeC(y[:,1],y[:,2],y[:,3])
@@ -106,7 +121,7 @@ class FF_Parall_Arm_model(nn.Module):
 
         torques = y[:,4:6]
 
-        eq_rhs = torques - CC @ d_thet + self.F @ d_thet
+        eq_rhs = torques - CC @ d_thet + self.F.repeat(self.n_arms,1,1) @ d_thet
 
         d_eq = inv_MM @ eq_rhs
 
@@ -126,9 +141,6 @@ class FF_Parall_Arm_model(nn.Module):
 
         y = []
         c_y = self.x0.clone() # need to detach ? No if you wanna differentiate through RK
-        c_t = 0
-        t = []
-        t.append(c_t)
 
         for it in range(n_iterations):
 
@@ -153,13 +165,9 @@ class FF_Parall_Arm_model(nn.Module):
             #c_y += t_step * (1/6) * (k1 + 2*k2 + 2*k3 + k4) # use w_average of the for slope to compute a slope from initial point
             c_y = c_y + t_step * (1 / 6) * (k1 + 2 * k2 + 2 * k3 + k4)
 
-            c_t += t_step
-
-            t.append(c_t)
-
         y.append(c_y) # store final locations, which contains backward gradient, through all previous points
 
-        return t, torch.stack(y)
+        return torch.stack(y)
 
 
 

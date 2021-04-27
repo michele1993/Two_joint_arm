@@ -3,7 +3,7 @@ from Supervised_learning.Feed_Forward.NN_Spvsd_FF_agent import Actor_NN
 import numpy as np
 import torch
 
-torch.manual_seed(18)  # FIX SEED
+torch.manual_seed(1)  # FIX SEED
 
 #Perform supervised learning using the first attempted approach, namely, using the dynamical model as provided by Berret et al. and using the
 # distance and velocity as cost function, with no regularisation or decay, where the agent is a NN mapping desired states to actions.
@@ -11,7 +11,7 @@ torch.manual_seed(18)  # FIX SEED
 #dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 dev = torch.device('cpu')
 
-episodes = 10000
+episodes = 3200
 n_RK_steps = 99
 time_window = 0
 n_parametrised_steps = n_RK_steps -time_window
@@ -78,12 +78,12 @@ for ep in range(1,episodes):
         print("distance: ",av_acc)
         print("velocity: ",av_vel)
 
-        if av_acc < th_error:
-            break
+        # if av_acc < th_error:
+        #     break
 
         ep_distance = []
         ep_velocity = []
 
-torch.save(agent.state_dict(), '/Users/michelegaribbo/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Results/NN_Spvsd_FF_agent_s18.py')
-torch.save(training_accuracy,'/Users/michelegaribbo/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Results/NN_Spvsd_FF_training_accuracy_s18.py')
-torch.save(training_velocity,'/Users/michelegaribbo/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/Results/NN_Spvsd_FF_training_velocity_s18.py')
+torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/Supervised_learning/Feed_Forward/Results/NN_Spvsd_FF_agent_s1.py')
+torch.save(training_accuracy,'/home/px19783/Two_joint_arm/Supervised_learning/Feed_Forward/Results/NN_Spvsd_FF_training_accuracy_s1.py')
+torch.save(training_velocity,'/home/px19783/Two_joint_arm/Supervised_learning/Feed_Forward/Results/NN_Spvsd_FF_training_velocity_s1.py')

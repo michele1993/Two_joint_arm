@@ -21,17 +21,17 @@ n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
 t_print = 100
-n_arms = 10
+n_arms = 1
 batch_size = 100
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
 f_points = - time_window_steps -1 # use last point with no zero actions
-vel_weight = 0.005#0.005#0.05#0.8
+vel_weight = 0.005#0.05#0.8
 ln_rate_c = 0.005
 ln_rate_a = 0.000001#0.000005
-std = 0.01 # 0.001 doesn't work, not enough exploration
-max_u = 15000
+std = 0.05#0.03 # 0.001 doesn't work, not enough exploration
+max_u = 15000 #15000
 actor_update = 1#10#5 #2 #5 #4 reaches 18cm distance and stops
 start_a_upd = 100
 
@@ -47,11 +47,11 @@ training_arm = FF_Parall_Arm_model(tspan,x0,dev, n_arms=n_arms)
 agent = Actor_NN(dev,Output_size = n_parametrised_steps *2,ln_rate = ln_rate_a).to(dev)
 agent.apply(agent.small_weight_init)
 
-c_input_s = n_parametrised_steps *2 + 2
-critic_1 = Critic_NN(n_arms, dev,input_size= c_input_s,ln_rate=ln_rate_c).to(dev)
+c_input_s = n_parametrised_steps *2
+critic_1 = Critic_NN(n_arms, dev,a_size = c_input_s,ln_rate=ln_rate_c).to(dev)
 #critic_2 = Critic_NN(input_size= c_input_s, ln_rate=ln_rate_c).to(dev)
 
-m_buffer = V_Memory_B(n_parametrised_steps,n_arms,dev,batch_size = batch_size,size = 5000)
+m_buffer = V_Memory_B(n_parametrised_steps,n_arms,dev,batch_size = batch_size,size = 5000*4)
 
 best_acc = 50
 
@@ -87,31 +87,25 @@ for ep in range(1,episodes):
     weighted_adv = rwd + vel_weight * velocity
 
     m_buffer.store_transition(target_state, Q_actions, weighted_adv)
-    spl_t_state, spl_a, spl_adv = m_buffer.sample_transition()
 
-    mean_G = torch.mean(torch.mean(weighted_adv, dim=0), dim=0)
-    std_G = torch.sqrt(torch.sum((mean_G - weighted_adv) ** 2) / (n_arms - 1))
-
+    # mean_G = torch.mean(torch.mean(weighted_adv, dim=0), dim=0)
+    # std_G = torch.sqrt(torch.sum((mean_G - weighted_adv) ** 2) / (n_arms - 1))
 
 
+    if ep > start_a_upd and ep % t_print == 0:
 
-    if ep > start_a_upd:
+        for i in range(t_print):
+            spl_t_state, spl_a, spl_adv = m_buffer.sample_transition()
 
-        spl_t_state, spl_a, spl_adv = m_buffer.sample_transition()
+            Q_v = critic_1(spl_t_state, spl_a.view(batch_size, -1), True) #BE CAREFUL WHEN HAVE MULTIPLE TARGET STATES as need to repeat in AC for each
+            c_loss = critic_1.update(spl_adv, Q_v)
 
-        Q_v = critic_1(spl_t_state, spl_a.view(batch_size, -1), True) #BE CAREFUL WHEN HAVE MULTIPLE TARGET STATES as need to repeat in AC for each
-        c_loss = critic_1.update(spl_adv, Q_v)
+            t_state = spl_t_state[0, :].view(1, 2)  # NOTE: need to be adpated when using mutiple end-points
+            det_actions = agent(t_state)
+            Tar_Q = critic_1(t_state, det_actions, True)  # want to max the advantage
 
-        t_state = spl_t_state[0, :].view(1, 2)  # NOTE: need to be adpated when using mutiple end-points
-        det_actions = agent(t_state)
-        Tar_Q = critic_1(t_state, det_actions, True)  # want to max the advantage
-
-        # confidence = torch.abs((Tar_Q - mean_G) / std_G).detach()
-        # training_confidence.append(confidence)
-        #
-        # if confidence <= 0.85:
-
-        agent.update(Tar_Q)
+            if i % actor_update == 0:
+                agent.update(Tar_Q)
 
 
     ep_rwd.append(torch.mean(torch.sqrt(rwd)))
@@ -119,7 +113,7 @@ for ep in range(1,episodes):
 
     if ep % t_print == 0:
 
-        std *= 0.9#9
+        #std *= 0.9#9
         print_acc = sum(ep_rwd)/t_print
         print_vel = sum(ep_vel)/t_print
         print_conf = sum(training_confidence) / t_print

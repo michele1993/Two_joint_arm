@@ -9,9 +9,10 @@ import numpy as np
 # Best so far
 # Implement DPG for the FeedForward arm model, inputting the desired location to a actor NN,
 # which outputs entire sequence of actions, then train a Q to predict simple advantage on entire
-# trajectory, and differentiate through that train actor, but maiting a distribution of MC returns
-# and if Q value for update action is more than "some" std from this distribution, skip update to actor
-# until Q estimates back to normal, same as Conf_FF implementation, just adding a region around end-point
+# trajectory, and differentiate through that train actor, but use a cycle where you update Q first
+# keeping Actor fixed, then fix Q and update Acotor, maiting a distribution of MC returns
+# and if Q value for update action is more than "some" std from this distribution, stop
+# updating actor and start re-updating Q
 
 torch.manual_seed(1)  # 16 FIX SEED
 
@@ -24,7 +25,7 @@ n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
 t_print = 100  # 0
-n_arms = 1#00  #
+n_arms = 100  #
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]  # initial condition, needs this shape
 t_step = tspan[-1] / n_RK_steps  # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
@@ -79,7 +80,7 @@ Tar_Q = torch.zeros(1)
 
 best_acc = 50
 
-update = True
+Q_update = True
 
 for ep in range(1, episodes):
 
@@ -108,7 +109,9 @@ for ep in range(1, episodes):
     weighted_adv = (rwd + vel_weight * velocity)
 
     Q_v = critic_1(target_state, Q_actions.view(n_arms, -1), False)
-    c_loss = critic_1.update(weighted_adv, Q_v)
+
+    if Q_update:
+        c_loss = critic_1.update(weighted_adv, Q_v)
 
     Tar_Q = critic_1(target_state, det_actions, True)  # want to max the advantage
 
@@ -119,8 +122,11 @@ for ep in range(1, episodes):
     training_confidence.append(confidence)
 
     if ep > start_a_upd and confidence <= th_conf:
-
+        Q_update = False
         agent.update(Tar_Q)
+    else:
+
+        Q_update = True
 
     ep_rwd.append(torch.mean(torch.sqrt(acc_rwd)))
     ep_vel.append(torch.mean(torch.sqrt(velocity)))
@@ -178,6 +184,3 @@ velocity = torch.sqrt(training_arm.compute_vel(thetas, f_points))
 
 print("tst rwd: ", rwd)
 print("tst vel: ",velocity)
-
-
-
