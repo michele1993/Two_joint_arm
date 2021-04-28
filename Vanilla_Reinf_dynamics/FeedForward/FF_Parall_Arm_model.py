@@ -2,6 +2,8 @@ import numpy as np
 #import matplotlib.pyplot as plt
 #import matplotlib.cm as cm
 import torch
+from math import pi, cos, sin
+from random import random
 
 
 
@@ -149,8 +151,6 @@ class Parall_Arm_model:
         return t, torch.stack(y)
 
 
-
-
     def compute_rwd(self,y, x_hat,y_hat, f_points): # based on average distance of last five points from target
 
         #[x_c, y_c] = self.convert_coord(y[-1:, :,0], y[-1:,:, 1])
@@ -159,13 +159,37 @@ class Parall_Arm_model:
         return (x_hat - x_c)**2 + (y_hat - y_c)**2 #torch.sqrt()# maintain original dimension for product with log_p
 
 
+    # Generate n random points along the circumference reacheable by the arm
+    def circof_random_tagrget(self,n):
+
+        radius = self.l1 + self.l2
+        points = []
+        quadrants = [-pi/2, pi/2] # define for
+
+        for i in range(n):
+            count = i % 2
+            theta = random() * quadrants[count]
+            x = radius * cos(theta)
+            y = radius * sin(theta)
+            points.append([x,y])
+
+        # Plot to show if points correctly generated
+        # plt.scatter(*zip(*points))
+        # plt.show()
+
+        return torch.tensor(points).to(self.dev)
+
     # Use this method to compute rwd when have multiple tatget x_hat, y_hat
-    def multiP_compute_rwd(self,y, x_hat,y_hat, f_points):
+    def multiP_compute_rwd(self,y, x_hat,y_hat, f_points,target_n_arms): # n_arms for each target, different from self.n_arms which refers to over all n of arms
 
         #[x_c, y_c] = self.convert_coord(y[-1:, :,0], y[-1:,:, 1])
         [x_c, y_c] = self.convert_coord(y[f_points:, :, 0], y[f_points:, :, 1])
 
-        return (x_hat - x_c.squeeze())**2 + (y_hat - y_c.squeeze())**2
+        # repeat target for each arm, matching x_c and y_c dimensions
+        x_hat = x_hat.repeat(1,target_n_arms,1)
+        y_hat = y_hat.repeat(1,target_n_arms,1)
+
+        return (x_hat - x_c)**2 + (y_hat - y_c)**2
 
 
     def compute_vel(self,y, f_points):

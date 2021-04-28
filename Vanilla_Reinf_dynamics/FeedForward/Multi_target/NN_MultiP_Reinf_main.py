@@ -4,7 +4,11 @@ import torch
 #from safety_checks.Video_arm_config import Video_arm
 import numpy as np
 
-# Use REINFORCE to control arm reaches in a feedforward fashion
+# Use REINFORCE to control arm reaches in a feedforward fashion with few multiple targets (e.g. 7)
+# trained in a serial fashion, i.e. 100 arms for each target on different gradient descent
+# steps
+
+
 torch.manual_seed(16)  # FIX SEED
 
 #dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
@@ -64,6 +68,8 @@ target_points = torch.tensor([[x_hat_1, y_hat_1],[x_hat_2, y_hat_2], [x_hat_3, y
                              ]).to(dev)
 
 training_arm = Parall_Arm_model(tspan,x0,dev, n_arms=n_arms)
+
+
 agent = Reinf_Actor_NN(std, n_arms,max_u,dev, ln_rate= ln_rate,Output_size=n_parametrised_steps*2).to(dev)
 agent.apply(agent.small_weight_init)
 

@@ -18,6 +18,8 @@ class Reinf_Actor_NN(nn.Module):
         self.max_u = max_u
         self.ln_rate = ln_rate
 
+        self.n_action = int(self.output_s / 2) # n of action for each torque
+
         self.l1 = nn.Linear(Input_size, h1_size)
         self.l2 = nn.Linear(h1_size, h2_size)
         self.l3 = nn.Linear(h2_size, h3_size)
@@ -30,17 +32,20 @@ class Reinf_Actor_NN(nn.Module):
         x = F.relu(self.l1(x))
         x = F.relu(self.l2(x))
         x = F.relu(self.l3(x))
-        x = torch.tanh(self.l4(x))
+        x = torch.tanh(self.l4(x)) # output mean value for each target, if multiples used
+
 
         # check x dim correct for distribution
         if not test:
-            d = Normal(x, self.std)
+            d = Normal(x, self.std) # build Gaussian for each target, , if multiples used
 
-            sampled_as = d.sample((self.n_arms,))
-            self.log_ps = d.log_prob(sampled_as).squeeze()
+            sampled_as = d.sample((self.n_arms,)) # take a sample for each arm
 
+            self.log_ps = d.log_prob(sampled_as).view(-1, self.output_s)
 
-            return sampled_as.view(self.n_arms,2,-1) * self.max_u
+            #sampled_as = torch.transpose(sampled_as,0,1) # reshape to targets x n_arms x actions - avoid using it so that can use view after
+
+            return sampled_as.view(-1,2,self.n_action) * self.max_u
 
         else:
 
@@ -57,7 +62,8 @@ class Reinf_Actor_NN(nn.Module):
 
     def update(self,dis_rwd):
 
-        dis_rwd = torch.sum(dis_rwd,dim=0)
+
+        dis_rwd = torch.sum(dis_rwd,dim=0) # needed in case include multiple final points
         loss = torch.sum(self.log_ps * dis_rwd)
         self.optimiser.zero_grad()
         loss.backward()
@@ -97,6 +103,7 @@ class Critic_NN(nn.Module):
 
     def forward(self, s,a, det):
 
+
         if not det: # for deterministic actions only use 1 arm, since all the same
             s = s.repeat(self.n_arms,1).to(self.dev)
 
@@ -115,7 +122,6 @@ class Critic_NN(nn.Module):
     def update(self, target, estimate):
 
         target = torch.mean(target,dim=0) # sum across time window
-
         loss = torch.mean((target - estimate)**2)
         self.optimiser.zero_grad()
         loss.backward() #needed for the actor
