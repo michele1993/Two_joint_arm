@@ -18,7 +18,7 @@ dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 #dev = torch.device('cpu')
 
 
-episodes = 250000
+episodes = 100000
 n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
@@ -114,12 +114,12 @@ for ep in range(1,episodes):
         ep_vel = []
         ep_c_loss = []
 
-torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Parallel_MultiReinf_Actor_1.pt')
-torch.save(training_acc,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Parallel_MultiReinf_Training_accur_1.pt')
-torch.save(training_vel,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Parallel_MultiReinf_Training_vel_1.pt')
-torch.save(target_states,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Parallel_MultiReinf_TargetPoints_1.pt')
-torch.save(training_crict_loss,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Parallel_MultiReinf_TrainingCLoss_1.pt')
-torch.save(critic.state_dict(),'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Parallel_MultiReinf_critic_1.pt')
+torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Parallel_MultiReinf_Actor_2.pt')
+torch.save(training_acc,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Parallel_MultiReinf_Training_accur_2.pt')
+torch.save(training_vel,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Parallel_MultiReinf_Training_vel_2.pt')
+torch.save(target_states,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Parallel_MultiReinf_TargetPoints_2.pt')
+torch.save(training_crict_loss,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Parallel_MultiReinf_TrainingCLoss_2.pt')
+torch.save(critic.state_dict(),'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Parallel_MultiReinf_critic_2.pt')
 
 
 tst_actions = (agent(target_states,True)).view(n_target_p, 2, -1)
@@ -128,7 +128,7 @@ test_arm = Parall_Arm_model(tspan,x0,dev, n_arms=n_target_p)
 
 _, thetas = test_arm.perform_reaching(t_step, tst_actions.detach())
 
-rwd = torch.sqrt(test_arm.compute_rwd(thetas, target_states[:,0:1], target_states[:,0:1], f_points))
+rwd = torch.sqrt(test_arm.compute_rwd(thetas, target_states[:,0:1], target_states[:,1:2], f_points))
 velocity = torch.sqrt(test_arm.compute_vel(thetas, f_points))
 
 print("tst rwd: ", rwd)

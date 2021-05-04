@@ -12,7 +12,7 @@ torch.manual_seed(1)  # FIX SEED
 dev = torch.device('cpu')
 
 
-episodes = 3200
+episodes = 15000
 n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
@@ -87,17 +87,16 @@ for ep in range(1,episodes):
         training_acc.append(print_acc)
         training_vel.append(print_vel)
         #training_actions.append(torch.mean(actions.detach(), dim=0))
-        if print_acc < th_error:
-            break
+        # if print_acc < th_error:
+        #     break
+
         ep_rwd = []
         ep_vel = []
 
-# torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/NN_FF_Reinf_Actor_s1.pt')
-# torch.save(training_acc,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/NN_FF_Reinf_Training_accur_s1.pt')
-# torch.save(training_vel,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/NN_FF_Reinf_Training_vel_s1.pt')
-torch.save(agent.state_dict(), '/Users/michelegaribbo/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Actor_s1.pt')
-torch.save(training_acc,'/Users/michelegaribbo/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Training_accur_s1.pt')
-torch.save(training_vel,'/Users/michelegaribbo/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Training_vel_s1.pt')
+
+torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Actor_s1_NoStopped.pt')
+torch.save(training_acc, '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Training_accur_s1_NoStopped.pt')
+torch.save(training_vel, '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Training_vel_s1_NoStopped.pt')
 
 tst_actions = (agent(target_state,True)).view(1, 2, -1)
 test_arm = Parall_Arm_model(tspan,x0,dev, n_arms=1)

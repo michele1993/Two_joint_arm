@@ -6,25 +6,28 @@ import numpy as np
 # After having trained model on multiple targets with REINFORCE, test DPG vs REINFORCE
 # generalisation ability, doesn't work for 7 points
 
-actor_params = torch.load("/Users/michelegaribbo/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_MultiReinf_Actor_3.pt")
-critic_params = torch.load("/Users/michelegaribbo/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_MultiReinf_critic_3.pt")
-target_points = torch.load("/Users/michelegaribbo/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_MultiReinf_TargetPoints_3.pt")
+torch.manual_seed(1)
+
+actor_params = torch.load("/Users/michelegaribbo/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/Parallel_MultiReinf_Actor_2.pt",map_location=torch.device('cpu'))
+critic_params = torch.load("/Users/michelegaribbo/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/Parallel_MultiReinf_critic_2.pt",map_location=torch.device('cpu'))
+target_points = torch.load("/Users/michelegaribbo/PycharmProjects/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/Parallel_MultiReinf_TargetPoints_2.pt",map_location=torch.device('cpu'))
 
 dev = torch.device('cpu')
 n_RK_steps = 99
 std = 0.01
 n_arms = 1
-max_u = 15000 # add it afterward to
+max_u = 15000 # Q was learnt with full magnitude actions
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]
 t_step = tspan[-1]/n_RK_steps
 f_points = -1
-DPG_ln_rate = 0.00001
-general_eps = 1000
+DPG_ln_rate = 0.001
+general_eps = 100#000
 t_print = 10
-n_targets = 7
+n_targets = target_points.size()[0]
 
-agent = Reinf_Actor_NN(std,n_arms, 1,dev,ln_rate = DPG_ln_rate) # 1 is for max_u, add afterward since Q trained with tanh output
+
+agent = Reinf_Actor_NN(std,n_arms, max_u,dev,ln_rate = DPG_ln_rate) # 1 is for max_u, add afterward since Q trained with tanh output
 critic = Critic_NN(n_arms,dev)
 
 agent.load_state_dict(actor_params)
@@ -32,7 +35,7 @@ critic.load_state_dict(critic_params)
 
 arm = Parall_Arm_model(tspan,x0,dev,n_arms=n_targets)
 
-noise = torch.randn(1,2) * 0.01#.0001
+noise = torch.randn(n_targets,2) * 1#.0001
 
 target_states = target_points + noise
 
@@ -46,20 +49,28 @@ tot_velocity = []
 
 for ep in range(1,general_eps):
 
-    tanh_actions = agent(target_states, True)
+    Q_actions = agent(target_states, True)
 
-    actions = (tanh_actions * max_u).view(n_targets, 2, n_RK_steps).detach()
+    actions = Q_actions.view(n_targets, 2, n_RK_steps).detach()
 
     _, thetas = arm.perform_reaching(t_step,actions)
 
-    rwd = arm.multiP_compute_rwd(thetas,target_states[:,0],target_states[:,1], f_points).squeeze()
+    rwd = arm.multiP_compute_rwd(thetas,target_states[:,0:1],target_states[:,1:2], f_points,n_arms).squeeze()
 
 
     sqrd_velocity = arm.compute_vel(thetas, f_points).squeeze()
 
 
-    TargetQ = critic(target_states,tanh_actions,True) # one at the time or all in one update ?
+    TargetQ = critic(target_states,Q_actions,True) # one at the time or all in one update ?
 
+    print(target_states)
+    print(TargetQ, "\n")
+
+    TargetQ_2 = critic(target_points, Q_actions, True)
+
+    print(target_points)
+    print(TargetQ_2, "\n")
+    exit()
 
     # Try to perturb actions to see if grad Q changes
     #noise_a = torch.randn((7,198)) *0

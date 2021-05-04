@@ -11,25 +11,33 @@ import numpy as np
 # which outputs entire sequence of actions, then train a Q to predict simple advantage on entire
 # trajectory, and differentiate through that train actor, but maiting a distribution of MC returns
 # and if Q value for update action is more than "some" std from this distribution, skip update to actor
-# until Q estimates back to normal, same as Conf_FF implementation, just adding a region around end-point
+# until Q estimates back to normal, same as Conf_FF implementation, just adding a region around end-point.
 
-torch.manual_seed(1)  # 16 FIX SEED
+#NOTE: Tried with one arm and no confidence, just updating actor every other iteration,
+# but doesn't work, get stuck at 0.22 cm, even if trained for 35000eps, but add to use
+# more stringent velocity_weight, (i.e. = 0.4) otherwise, get too much velocity.
+# exploration issue (I guess? ),
+
+
+torch.manual_seed(0)  # 16 FIX SEED
 
 # dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 dev = torch.device('cpu')
 
-episodes = 20000
+episodes = 10000
 n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
 t_print = 100  # 0
-n_arms = 1#00  #
+
+n_arms = 100
+
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]  # initial condition, needs this shape
 t_step = tspan[-1] / n_RK_steps  # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
 f_points = -time_window_steps -1 # use last point with no zero action # number of final points to average across for distance to target and velocity
-vel_weight = 0.005#0.05  # 0.8# 0.6
+vel_weight = 0.005 #0.005
 ln_rate_c = 0.005  # 0.01 #0.001# 0.005
 ln_rate_a = 0.00001  # 0.000005  #0.00001 #0.000005
 std = 0.01#0.01#0.01  # 0.2 #0.000015#0.02
@@ -112,13 +120,13 @@ for ep in range(1, episodes):
 
     Tar_Q = critic_1(target_state, det_actions, True)  # want to max the advantage
 
+    # UNCOMMENT for multiple arms, best version
     mean_G = torch.mean(torch.mean(weighted_adv, dim=0), dim=0)
     std_G = torch.sqrt(torch.sum((mean_G - weighted_adv) ** 2) / (n_arms - 1))
-
     confidence = torch.abs((Tar_Q - mean_G) / std_G).detach()
     training_confidence.append(confidence)
 
-    if ep > start_a_upd and confidence <= th_conf:
+    if ep > start_a_upd and confidence <= th_conf: # ep % 2 == 0
 
         agent.update(Tar_Q)
 
@@ -144,9 +152,9 @@ for ep in range(1, episodes):
         print("Confidence: ", print_conf, "\n")
         print("Mean actions: ", torch.mean(det_actions**2))
         print("actor std: ", std)
-        print("mean G ", mean_G)
+        #print("mean G ", mean_G)
         print("Target Q: ", Tar_Q)
-        print("std G ", std_G, '\n')
+        #print("std G ", std_G, '\n')
 
         # if print_acc < th_error:
         #     break
@@ -159,10 +167,10 @@ for ep in range(1, episodes):
         training_confidence = []
 
 
-# torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/TD_3/FeedForward/Conf3_FF_DPG_Actor_s18.pt')
-# torch.save(critic_1.state_dict(), '/home/px19783/Two_joint_arm/TD_3/FeedForward/Conf3_FF_DPG_Critic_s18.pt')
-# torch.save(training_acc,'/home/px19783/Two_joint_arm/TD_3/FeedForward/Conf3_FF_DPG_Training_accur_s18.pt')
-# torch.save(training_vel,'/home/px19783/Two_joint_arm/TD_3/FeedForward/Conf3_FF_DPG_Training_vel_s18.pt')
+torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Actor_s0_NoStop.pt')
+torch.save(critic_1.state_dict(), '/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Critic_s0_NoStop.pt')
+torch.save(training_acc,'/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Training_accur_s0_NoStop.pt')
+torch.save(training_vel,'/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Training_vel_s0_NoStop.pt')
 #torch.save(training_actions,'/home/px19783/Two_joint_arm/TD_3/FeedForward/Conf3_FF_DPG_Training_actions_1.pt')
 
 
