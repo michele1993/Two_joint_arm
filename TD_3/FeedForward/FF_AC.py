@@ -73,6 +73,12 @@ class Actor_NN(nn.Module):
 
         return actions
 
+    def MB_update(self,actions ,gradient):
+
+        actions.backward(gradient=gradient)
+        self.optimiser.step()
+        self.optimiser.zero_grad()
+
 
 
 class Critic_NN(nn.Module):

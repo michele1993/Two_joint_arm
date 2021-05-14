@@ -148,7 +148,6 @@ class FF_Parall_Arm_model:
 
     def compute_rwd(self,y, x_hat,y_hat, f_points): # based on average distance of last five points from target
 
-        #[x_c, y_c] = self.convert_coord(y[-1:, :,0], y[-1:,:, 1])
         [x_c, y_c] = self.convert_coord(y[f_points:, :, 0], y[f_points:, :, 1])
 
         return (x_hat - x_c)**2 + (y_hat - y_c)**2 #torch.sqrt()# maintain original dimension for product with log_p
