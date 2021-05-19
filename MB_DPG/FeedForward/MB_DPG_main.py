@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from MB_DPG.FeedForward.Learnt_arm_model import learnt_ArmModel
 
-torch.manual_seed(0)  # 16 FIX SEED
+torch.manual_seed(1)  # 16 FIX SEED
 
 #torch.autograd.set_detect_anomaly(True)
 
@@ -12,12 +12,12 @@ torch.manual_seed(0)  # 16 FIX SEED
 
 dev = torch.device('cpu')
 
-episodes = 10000
+episodes = 15000
 n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
-t_print = 10  # 100
-n_arms = 100#5#0 #100
+t_print = 100  # 100
+n_arms = 10#00#5#0 #100
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]  # initial condition, needs this shape
 t_step = tspan[-1] / n_RK_steps
@@ -30,7 +30,8 @@ max_u = 15000
 start_a_upd = 500 # 1000 performs much worse
 a_size = n_parametrised_steps *2
 est_y_size = 4 # attempt to predict only 4 necessary components to estimated the rwd (ie. 2 angles and 2 angle vels)
-
+actor_update = 3
+std_decay = 0.999
 
 # Target endpoint, based on matlab - reach straight in front, at shoulder height
 x_hat = 0.792
@@ -89,7 +90,7 @@ for ep in range(1, episodes):
     rwd = training_arm.compute_rwd(diff_thetas, x_hat, y_hat, f_points)
     vel = training_arm.compute_vel(diff_thetas, f_points)
 
-    if ep > start_a_upd and ep % 3 ==0:
+    if ep > start_a_upd and ep % actor_update ==0:
 
         # Note: use sum to obtain a scalar value, which can be passed to autograd.grad, it's fine since all the grad for each arm are independent
         weight_rwd = torch.sum(rwd + vel * vel_weight)
@@ -109,13 +110,14 @@ for ep in range(1, episodes):
     ep_rwd.append(torch.mean(torch.sqrt(rwd.detach())))
     ep_vel.append(torch.mean(torch.sqrt(vel.detach())))
 
+    if ep % 10 == 0:  # decays works better if applied every 10 eps
+        std *= std_decay
 
     if ep % t_print == 0:
 
         print_acc = sum(ep_rwd) / t_print
         print_vel = sum(ep_vel) / t_print
         print_MLoss = sum(ep_MLoss) / t_print
-        std *= 0.999
 
 
         if print_acc < best_acc:
@@ -136,3 +138,9 @@ for ep in range(1, episodes):
         ep_MLoss = []
         training_acc.append(print_acc)
         training_vel.append(print_vel)
+
+
+torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_actor_s1.pt')
+torch.save(est_arm.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_model_s1.pt')
+torch.save(training_acc,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_training_acc_s1.pt')
+torch.save(training_vel,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_training_vel_s1.pt')
