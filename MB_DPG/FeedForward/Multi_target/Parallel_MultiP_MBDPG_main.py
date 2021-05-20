@@ -1,18 +1,16 @@
-from TD_3.FeedForward.FF_parall_arm import FF_Parall_Arm_model
+from MB_DPG.FeedForward.Multi_target.MultiP_learnArm_model import Multi_learnt_ArmModel
 from TD_3.FeedForward.FF_AC import *
+from TD_3.FeedForward.FF_parall_arm import FF_Parall_Arm_model
+from torch.distributions import Normal
 import torch
 import numpy as np
-from MB_DPG.FeedForward.Learnt_arm_model import learnt_ArmModel
+
+
 
 torch.manual_seed(1)  # 16 FIX SEED
+dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-#torch.autograd.set_detect_anomaly(True)
-
-# dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
-dev = torch.device('cpu')
-
-episodes = 15000
+episodes = 50000
 n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
@@ -23,7 +21,7 @@ x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]  # initial condit
 t_step = tspan[-1] / n_RK_steps
 f_points = -time_window_steps -1 # use last point with no zero action # number of final points to average across for distance to target and velocity
 vel_weight = 0.05#0.2#0.4
-ln_rate_a = 0.00005#0.00001
+ln_rate_a = 0.0001#0.00005
 model_lr = 0.001
 std = 0.01
 max_u = 15000
@@ -31,21 +29,20 @@ start_a_upd = 500 # 1000 performs much worse
 a_size = n_parametrised_steps *2
 est_y_size = 4 # attempt to predict only 4 necessary components to estimated the rwd (ie. 2 angles and 2 angle vels)
 actor_update = 3
-std_decay = 0.999
-
-# Target endpoint, based on matlab - reach straight in front, at shoulder height
-x_hat = 0.792
-y_hat = 0
-
-target_state = torch.tensor([x_hat, y_hat]).view(1, 2).to(dev)  # .repeat(n_arms,1).to(dev)
+std_decay = 0.9999# 0.999
+n_target_p = 50
+overall_n_arms = n_target_p * n_arms
 
 
-training_arm = FF_Parall_Arm_model(tspan, x0, dev, n_arms=n_arms)
-est_arm = learnt_ArmModel(output_s = est_y_size, ln_rate= model_lr)
+training_arm = FF_Parall_Arm_model(tspan, x0, dev, n_arms=overall_n_arms)
+est_arm = Multi_learnt_ArmModel(output_s = est_y_size, ln_rate= model_lr).to(dev)
 
 # Initialise actor and critic
 agent = Actor_NN(dev, Output_size=n_parametrised_steps * 2, ln_rate=ln_rate_a).to(dev)
 agent.apply(agent.small_weight_init)
+
+# Use to randomly generate targets in front of the arm and on the max distance circumference
+target_states = training_arm.circof_random_tagrget(n_target_p)
 
 # Initialise some useful variables
 avr_rwd = 0
@@ -64,14 +61,17 @@ training_actions = []
 rwd = torch.zeros(1)
 vel = torch.zeros(1)
 
+
 for ep in range(1, episodes):
 
-    det_actions = agent(target_state)  # may need converting to numpy since it's a tensor
 
+    det_actions = agent(target_states)  # may need converting to numpy since it's a tensor
 
-    exploration = (torch.randn((n_arms, 2, n_parametrised_steps)) * std).to(dev)
+    d = Normal(det_actions,std)
+    actions = d.sample((n_arms,)).view(-1,2, n_RK_steps)#  * max_u , don't apply actual value for action fed to meta model
 
-    actions = (det_actions.view(1, 2, -1) + exploration) #  * max_u , don't apply actual value for action fed to meta model
+    # exploration = (torch.randn((overall_n_arms, 2, n_parametrised_steps)) * std).to(dev)
+    # actions = (det_actions.view(n_target_p, 2, -1) + exploration)
 
     simulator_actions = actions * max_u
 
@@ -81,7 +81,7 @@ for ep in range(1, episodes):
     thetas = thetas[-1:,:,0:est_y_size].squeeze(dim=-1) # only squeeze last dim, because if squeeze all then size no longer suitable for compute rwd/vel
 
     # Update the estimated model:
-    est_y = est_arm(actions.view(n_arms,a_size).detach()) # compute y prediction based on current action
+    est_y = est_arm(actions.view(overall_n_arms,a_size).detach()) # compute y prediction based on current action
 
     model_loss = est_arm.update(thetas, est_y)
     ep_MLoss.append(model_loss)
@@ -89,7 +89,8 @@ for ep in range(1, episodes):
     # compute all the necessary gradients for chain-rule update of actor
     diff_thetas = thetas.clone().detach().requires_grad_(True)  # wrap thetas around differentiable tensor to compute dr/dy
 
-    rwd = training_arm.compute_rwd(diff_thetas, x_hat, y_hat, f_points)
+    # Change this
+    rwd = training_arm.multiP_compute_rwd(diff_thetas,target_states[:,0:1],target_states[:,1:2], f_points, n_arms)
     vel = training_arm.compute_vel(diff_thetas, f_points)
 
     if ep > start_a_upd and ep % actor_update ==0:
@@ -100,7 +101,8 @@ for ep in range(1, episodes):
         # compute gradient of rwd with respect to outcome
         dr_dy = torch.autograd.grad(outputs=weight_rwd, inputs = diff_thetas)[0]
 
-        est_y = est_arm(actions.view(n_arms, a_size)) # re-estimate values since model has been updated
+        actions = actions.clone().detach().requires_grad_(True) # since actions sampled from gaussian don't have gradient anymore
+        est_y = est_arm(actions.view(overall_n_arms, a_size)) # re-estimate values since model has been updated and gradient changed
 
         # compute gradient of rwd with respect to actions, using environment outcome
         dr_da = torch.autograd.grad(outputs= est_y, inputs = actions, grad_outputs= dr_dy.squeeze())[0]
@@ -141,8 +143,7 @@ for ep in range(1, episodes):
         training_acc.append(print_acc)
         training_vel.append(print_vel)
 
-
-torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_actor_s1.pt')
-torch.save(est_arm.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_model_s1.pt')
-torch.save(training_acc,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_training_acc_s1.pt')
-torch.save(training_vel,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_training_vel_s1.pt')
+torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_actor_s1.pt')
+torch.save(est_arm.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_model_s1.pt')
+torch.save(training_acc,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_training_acc_s1.pt')
+torch.save(training_vel,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_training_vel_s1.pt')

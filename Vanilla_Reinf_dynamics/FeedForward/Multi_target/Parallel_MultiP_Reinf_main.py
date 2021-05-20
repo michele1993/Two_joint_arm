@@ -38,7 +38,7 @@ overall_n_arms = n_target_p * n_arms
 
 training_arm = Parall_Arm_model(tspan,x0,dev, n_arms= overall_n_arms)
 
-# Use to randomly generate targets
+# Use to randomly generate targets in front of the arm and on the max distance circumference
 target_states = training_arm.circof_random_tagrget(n_target_p)
 
 
@@ -47,7 +47,7 @@ agent.apply(agent.small_weight_init)
 
 critic = Critic_NN(n_arms,dev).to(dev)
 
-
+# Initialise some useful variables
 avr_rwd = 0
 avr_vel = 0
 alpha = 0.01
@@ -67,6 +67,7 @@ for ep in range(1,episodes):
 
 
     actions = agent(target_states,False) # CAREFUL: actions in shape: n_arms x targets x n_param_steps
+
 
     t, thetas = training_arm.perform_reaching(t_step,actions)
 

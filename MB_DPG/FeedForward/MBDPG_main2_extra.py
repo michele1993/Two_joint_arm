@@ -4,6 +4,10 @@ import torch
 import numpy as np
 from MB_DPG.FeedForward.Learnt_arm_model import learnt_ArmModel
 
+
+# NOT WORKING - Tried training model with parallel stochastic actions while improving policy based on
+# deterministic action, by taking an extra roll-out, but not working
+
 torch.manual_seed(0)  # 16 FIX SEED
 
 #torch.autograd.set_detect_anomaly(True)
