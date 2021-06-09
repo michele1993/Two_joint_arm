@@ -4,7 +4,7 @@ import torch.optim as op
 
 class Multi_learnt_ArmModel(nn.Module):
 
-    def __init__(self, action_s = 198 ,h_s = 118,h_s2=118, output_s = 4,ln_rate=1e-3):
+    def __init__(self, action_s = 198 ,h_s = 400,h_s2=300, output_s = 4,ln_rate=1e-3):
 
         super().__init__()
         self.l1 = nn.Linear(action_s,h_s)

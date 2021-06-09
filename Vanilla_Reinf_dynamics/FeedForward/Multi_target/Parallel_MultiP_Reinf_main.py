@@ -18,7 +18,7 @@ dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 #dev = torch.device('cpu')
 
 
-episodes = 100000
+episodes = 100000 #
 n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
@@ -39,7 +39,9 @@ overall_n_arms = n_target_p * n_arms
 training_arm = Parall_Arm_model(tspan,x0,dev, n_arms= overall_n_arms)
 
 # Use to randomly generate targets in front of the arm and on the max distance circumference
-target_states = training_arm.circof_random_tagrget(n_target_p)
+#target_states = training_arm.circof_random_tagrget(n_target_p)
+# load target from those used for MB DPG:
+target_states = torch.load('/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_targetPoints_s1_2.pt')
 
 
 agent = Reinf_Actor_NN(std, n_arms,max_u,dev, ln_rate= ln_rate,Output_size=n_parametrised_steps*2).to(dev)
@@ -115,12 +117,12 @@ for ep in range(1,episodes):
         ep_vel = []
         ep_c_loss = []
 
-torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Parallel_MultiReinf_Actor_2.pt')
-torch.save(training_acc,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Parallel_MultiReinf_Training_accur_2.pt')
-torch.save(training_vel,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Parallel_MultiReinf_Training_vel_2.pt')
-torch.save(target_states,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Parallel_MultiReinf_TargetPoints_2.pt')
-torch.save(training_crict_loss,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Parallel_MultiReinf_TrainingCLoss_2.pt')
-torch.save(critic.state_dict(),'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Parallel_MultiReinf_critic_2.pt')
+torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Results/Parallel_MultiReinf_Actor_comparison.pt')
+torch.save(training_acc,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Results/Parallel_MultiReinf_Training_accur_comparison.pt')
+torch.save(training_vel,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Results/Parallel_MultiReinf_Training_vel_comparison.pt')
+torch.save(target_states,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Results/Parallel_MultiReinf_TargetPoints_comparison.pt')
+torch.save(training_crict_loss,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Results/Parallel_MultiReinf_TrainingCLoss_comparison.pt')
+torch.save(critic.state_dict(),'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Results/Parallel_MultiReinf_critic_comparison.pt')
 
 
 tst_actions = (agent(target_states,True)).view(n_target_p, 2, -1)

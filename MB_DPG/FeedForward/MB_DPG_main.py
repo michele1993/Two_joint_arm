@@ -17,13 +17,13 @@ n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
 t_print = 100
-n_arms = 10
+n_arms = 10#10
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]  # initial condition, needs this shape
 t_step = tspan[-1] / n_RK_steps
 f_points = -time_window_steps -1 # use last point with no zero action # number of final points to average across for distance to target and velocity
 vel_weight = 0.05#0.2#0.4
-ln_rate_a = 0.00005#0.00001
+ln_rate_a = 0.00005#0.00001 # 0.0001
 model_lr = 0.001
 std = 0.01
 max_u = 15000
@@ -34,8 +34,10 @@ actor_update = 3
 std_decay = 0.999
 
 # Target endpoint, based on matlab - reach straight in front, at shoulder height
-x_hat = 0.792
-y_hat = 0
+x_hat = 0.396#0.792
+y_hat = -0.396
+
+
 
 target_state = torch.tensor([x_hat, y_hat]).view(1, 2).to(dev)  # .repeat(n_arms,1).to(dev)
 
@@ -142,7 +144,7 @@ for ep in range(1, episodes):
         training_vel.append(print_vel)
 
 
-torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_actor_s1.pt')
-torch.save(est_arm.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_model_s1.pt')
-torch.save(training_acc,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_training_acc_s1.pt')
-torch.save(training_vel,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_training_vel_s1.pt')
+torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_actor_s1_p2.pt')
+torch.save(est_arm.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_model_s1_p2.pt')
+torch.save(training_acc,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_training_acc_s1_p2.pt')
+torch.save(training_vel,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_training_vel_s1_p2.pt')
