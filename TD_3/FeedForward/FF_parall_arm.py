@@ -4,9 +4,6 @@ from math import pi, cos, sin
 from random import random
 
 
-
-
-
 class FF_Parall_Arm_model:
 
     def __init__(self,tspan,x0,dev, n_arms=10, height=1.8, mass=80):

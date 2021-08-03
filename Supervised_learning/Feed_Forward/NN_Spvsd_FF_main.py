@@ -20,7 +20,7 @@ tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
 t_step = tspan[-1]/n_RK_steps
 f_points = -time_window -1
-ln_rate_a = 0.00001
+ln_rate_a = 0.0002
 velocity_weight = 0.005
 max_u = 15000
 th_error = 0.01#0.025 # i.e. same accuracy as DPG at test
@@ -83,6 +83,6 @@ for ep in range(1,episodes):
         ep_distance = []
         ep_velocity = []
 
-torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/Supervised_learning/Feed_Forward/Results/NN_Spvsd_FF_agent_s1_Nostopped.py')
-torch.save(training_accuracy,'/home/px19783/Two_joint_arm/Supervised_learning/Feed_Forward/Results/NN_Spvsd_FF_training_accuracy_s1_Nostopped.py')
-torch.save(training_velocity,'/home/px19783/Two_joint_arm/Supervised_learning/Feed_Forward/Results/NN_Spvsd_FF_training_velocity_s1_Nostopped.py')
+torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/Supervised_learning/Feed_Forward/Results/NN_Spvsd_FF_agent_s1_BestParams.py')
+torch.save(training_accuracy,'/home/px19783/Two_joint_arm/Supervised_learning/Feed_Forward/Results/NN_Spvsd_FF_training_accuracy_s1_BestParams.py')
+torch.save(training_velocity,'/home/px19783/Two_joint_arm/Supervised_learning/Feed_Forward/Results/NN_Spvsd_FF_training_velocity_s1_BestParams.py')

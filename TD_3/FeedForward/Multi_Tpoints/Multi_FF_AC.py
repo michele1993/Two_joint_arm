@@ -124,7 +124,7 @@ class Critic_NN(nn.Module):
 
     def update(self, target, estimate):
 
-        target = torch.mean(target,dim=0) # sum across time window
+        target = target[0,:] # adjust the size to make target and estimate shapes match
 
         loss = torch.mean((target - estimate)**2)
         self.optimiser.zero_grad()

@@ -21,8 +21,9 @@ ln_rate_a = 0.00001
 velocity_weight = 0.005
 max_u = 15000
 th_error = 0.025
-n_arms = 1
-Model_ln_rate = 0.08
+n_arms = 100
+Model_ln_rate = 0.1#0.01 #0.08
+std = 0.01
 
 # Target endpoint, based on matlab - reach straight in front, at shoulder height
 x_hat = 0.792
@@ -45,19 +46,29 @@ ep_velocity = []
 for ep in range(Overall_episodes):
 
 
-    actions = agent(target_state).view(1,2,n_parametrised_steps).detach()
+    det_actions = agent(target_state).view(1,2,n_parametrised_steps).detach()
+
+    exploration = (torch.randn((n_arms, 2, n_parametrised_steps)) * std).to(dev)
+    actions = (det_actions + exploration)
 
     target_ths = target_arm.perform_reaching(t_step, actions)
 
     rwd = target_arm.compute_rwd(target_ths, target_state[0,0], target_state[0,1], -1)
     velocity = target_arm.compute_vel(target_ths, -1)
 
-    if torch.sqrt(rwd) > th_error:
+    if torch.mean(torch.sqrt(rwd)) > th_error:
 
-        print("Overall Accuracy: ", torch.sqrt(rwd))
-        print("Overall Velocity: ", torch.sqrt(velocity), "\n")
+        print("Overall Accuracy: ", torch.mean(torch.sqrt(rwd)))
+        print("Overall Velocity: ", torch.mean(torch.sqrt(velocity)), "\n")
 
-        MB_alg.update_model(actions, target_ths)
+        modelUpd_eps = MB_alg.update_model(actions, target_ths, target_arm)
+
+        print("Eps to update model: ", modelUpd_eps)
+        print(target_arm.alpha)
+        print(target_arm.omega)
+        print(target_arm.F)
+
+        exit()
         MB_alg.update_actor(target_state)
 
 

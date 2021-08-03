@@ -4,7 +4,7 @@ import torch
 import numpy as np
 from MB_DPG.FeedForward.Learnt_arm_model import learnt_ArmModel
 
-torch.manual_seed(1)  # 16 FIX SEED
+torch.manual_seed(1) # all results based on seed(1)  # 16 FIX SEED
 
 #torch.autograd.set_detect_anomaly(True)
 
@@ -12,7 +12,7 @@ torch.manual_seed(1)  # 16 FIX SEED
 
 dev = torch.device('cpu')
 
-episodes = 15000
+episodes = 5001#15000
 n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
@@ -22,10 +22,10 @@ tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]  # initial condition, needs this shape
 t_step = tspan[-1] / n_RK_steps
 f_points = -time_window_steps -1 # use last point with no zero action # number of final points to average across for distance to target and velocity
-vel_weight = 0.05#0.2#0.4
-ln_rate_a = 0.00005#0.00001 # 0.0001
-model_lr = 0.001
-std = 0.01
+vel_weight = 0.05 #0.2#0.4
+ln_rate_a = 4.4500e-03 #0.00005 # 0.0056
+model_lr = 5.5600e-03  #  0.0078
+std = 0.0124#0.01
 max_u = 15000
 start_a_upd = 500 # 1000 performs much worse
 a_size = n_parametrised_steps *2
@@ -34,8 +34,8 @@ actor_update = 3
 std_decay = 0.999
 
 # Target endpoint, based on matlab - reach straight in front, at shoulder height
-x_hat = 0.396#0.792
-y_hat = -0.396
+x_hat = 0.792 #0.396#0.792
+y_hat = 0 #-0.396
 
 
 
@@ -50,9 +50,6 @@ agent = Actor_NN(dev, Output_size=n_parametrised_steps * 2, ln_rate=ln_rate_a).t
 agent.apply(agent.small_weight_init)
 
 # Initialise some useful variables
-avr_rwd = 0
-avr_vel = 0
-alpha = 0.01
 best_acc = 50
 
 ep_rwd = []
@@ -143,8 +140,9 @@ for ep in range(1, episodes):
         training_acc.append(print_acc)
         training_vel.append(print_vel)
 
+print("Corrected best params")
 
-torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_actor_s1_p2.pt')
-torch.save(est_arm.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_model_s1_p2.pt')
-torch.save(training_acc,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_training_acc_s1_p2.pt')
-torch.save(training_vel,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_training_vel_s1_p2.pt')
+# torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_actor_BestP_s1.pt')
+# torch.save(est_arm.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_model_BestP_s1.pt')
+# torch.save(training_acc,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_training_acc_BestP_s1.pt')
+# torch.save(training_vel,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_training_vel_BestP_s1.pt')

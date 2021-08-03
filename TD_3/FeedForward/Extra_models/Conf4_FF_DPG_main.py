@@ -9,7 +9,7 @@ import numpy as np
 # Best so far
 # Implement DPG for the FeedForward arm model, inputting the desired location to a actor NN,
 # which outputs entire sequence of actions, then train a Q to predict simple MC retunr on entire
-# trajectory, and differentiate through that train actor, but using to critic NN, one target NN
+# trajectory, and differentiate through that train actor, but using two critic NNs, one target NN
 # towards which policy update, which is slowly updated through polyak average towards as second critic
 # NN which is constantly updated
 

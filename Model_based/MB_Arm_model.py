@@ -50,11 +50,14 @@ class MB_FF_Arm_model(nn.Module):
 
             self.alpha = nn.Parameter(torch.randn(1) * 0.1).to(self.dev)
             self.omega = nn.Parameter(torch.randn(1) * 0.1).to(self.dev)
+            self.optimiser = opt.Adam(self.parameters(), ln_rate)
 
         else:
             self.alpha = m1 * lc1 ** 2 + I1 + m2 * lc2 ** 2 + I2 + m2 * self.l1 ** 2
             self.omega = 2 * m2 * self.l1 * lc2
 
+        # self.alpha = m1 * lc1 ** 2 + I1 + m2 * lc2 ** 2 + I2 + m2 * self.l1 ** 2
+        # self.omega = 2 * m2 * self.l1 * lc2
 
         M22 = torch.Tensor([m2 * lc2 ** 2 + I2]).to(self.dev)
         self.M22 = M22.repeat(self.n_arms,1)
@@ -64,16 +67,18 @@ class MB_FF_Arm_model(nn.Module):
         self.beta = m2 * lc2**2 + I2
         self.delta = m2 * self.l1 * lc2
 
-        if trainable:
+        # if trainable:
+        #
+        #  self.F = nn.Parameter(torch.randn(2,2).to(self.dev))#.repeat(n_arms,1,1)
+        #
+        #  self.optimiser = opt.Adam(self.parameters(), ln_rate)
+        #
+        # else:
+        #     np.random.seed(1)
+        #     self.F = torch.Tensor(np.random.rand(2,2)).to(self.dev) *15 # repeat in first dimension given n of arms
 
-         self.F = nn.Parameter(torch.randn(2,2).to(self.dev))#.repeat(n_arms,1,1)
-
-         self.optimiser = opt.Adam(self.parameters(), ln_rate)
-
-        else:
-            np.random.seed(1)
-            self.F = torch.Tensor(np.random.rand(2,2)).to(self.dev) *15 # repeat in first dimension given n of arms
-
+        np.random.seed(1)
+        self.F = torch.Tensor(np.random.rand(2, 2)).to(self.dev) * 15
 
     def update(self, target, estimate):
 

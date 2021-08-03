@@ -19,28 +19,28 @@ import numpy as np
 # exploration issue (I guess? ),
 
 
-torch.manual_seed(0)  # 16 FIX SEED
+torch.manual_seed(1)  # 16 FIX SEED
 
-# dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+#dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 dev = torch.device('cpu')
 
-episodes = 10000
+episodes = 15000
 n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
 t_print = 100  # 0
 
-n_arms = 100
+n_arms = 100#100
 
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]  # initial condition, needs this shape
 t_step = tspan[-1] / n_RK_steps  # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
 f_points = -time_window_steps -1 # use last point with no zero action # number of final points to average across for distance to target and velocity
 vel_weight = 0.005 #0.005
-ln_rate_c = 0.005  # 0.01 #0.001# 0.005
-ln_rate_a = 0.00001  # 0.000005  #0.00001 #0.000005
-std = 0.01#0.01#0.01  # 0.2 #0.000015#0.02
+ln_rate_c = 5.6000e-04  # 0.01 #0.001# 0.005
+ln_rate_a = 4.5000e-04 #0.0006
+std = 0.0119#0.01#0.01#0.01  # 0.2 #0.000015#0.02
 max_u = 15000 # 10000
 # actor_update = 2#5 #2 #5 #4 reaches 18cm distance and stops
 start_a_upd = 100  # 50#500
@@ -166,11 +166,11 @@ for ep in range(1, episodes):
         #training_actions.append(torch.mean(det_actions.detach(), dim=0))
         training_confidence = []
 
-
-torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Actor_s0_NoStop.pt')
-torch.save(critic_1.state_dict(), '/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Critic_s0_NoStop.pt')
-torch.save(training_acc,'/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Training_accur_s0_NoStop.pt')
-torch.save(training_vel,'/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Training_vel_s0_NoStop.pt')
+print("Correct best params")
+torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Actor_s1_Best_arms.pt')
+torch.save(critic_1.state_dict(), '/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Critic_s1_Best_arms.pt')
+torch.save(training_acc,'/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Training_accur_s1_Best_arms.pt')
+torch.save(training_vel,'/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Training_vel_s1_Best_arms.pt')
 #torch.save(training_actions,'/home/px19783/Two_joint_arm/TD_3/FeedForward/Conf3_FF_DPG_Training_actions_1.pt')
 
 

@@ -6,15 +6,15 @@ import numpy as np
 
 # so far using fixed std, with no decay worked best, saved as ..._2
 
-torch.manual_seed(1)  # 16 FIX SEED
+torch.manual_seed(36)  # 16 FIX SEED
 dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-episodes = 40000
+episodes = 35000
 n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
 t_print = 100
-n_arms = 10
+n_arms = 10 # n. of arms for each target
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]  # initial condition, needs this shape
 t_step = tspan[-1] / n_RK_steps
@@ -30,7 +30,7 @@ est_y_size = 4 # attempt to predict only 4 necessary components to estimated the
 actor_update = 3
 std_decay = 0.999# 0.9999 with decay every 100 steps was working good
 n_target_p = 50
-overall_n_arms = n_target_p * n_arms
+overall_n_arms = n_target_p * n_arms # n. of parallel simulations (i.e. n. of amrms x n. of targets)
 
 
 training_arm = FF_Parall_Arm_model(tspan, x0, dev, n_arms=overall_n_arms)
@@ -46,9 +46,6 @@ target_states = torch.load('/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi
 
 
 # Initialise some useful variables
-avr_rwd = 0
-avr_vel = 0
-alpha = 0.01
 best_acc = 50
 
 ep_rwd = []
@@ -69,6 +66,8 @@ for ep in range(1, episodes):
 
     # add noise to each action for each arm for each target
     exploration = (torch.randn((overall_n_arms, 2, n_parametrised_steps)) * std).to(dev)
+
+    # need to repeat the deterministic action for each arm so can add noise to each
     actions = det_actions.repeat(n_arms,1).view(overall_n_arms, 2, n_parametrised_steps) + exploration # need to repeat action means so that can add noise for each target x arm cobination
 
     simulator_actions = actions * max_u
@@ -88,7 +87,7 @@ for ep in range(1, episodes):
     diff_thetas = thetas.clone().detach().requires_grad_(True)  # wrap thetas around differentiable tensor to compute dr/dy with autograd.grad
 
 
-    # Change this
+    # Change this (?)
     rwd = training_arm.multiP_compute_rwd(diff_thetas,target_states[:,0:1],target_states[:,1:2], f_points, n_arms)
     vel = training_arm.compute_vel(diff_thetas, f_points)
 
@@ -101,7 +100,7 @@ for ep in range(1, episodes):
         dr_dy = torch.autograd.grad(outputs=weight_rwd, inputs = diff_thetas)[0]
 
 
-        est_y = est_arm(actions.view(overall_n_arms, a_size)) # re-estimate values since model has been updated and gradient changed
+        est_y = est_arm(actions.view(overall_n_arms, a_size)) # re-estimate model prediction since model has been updated and gradient changed
 
         # compute gradient of rwd with respect to actions, using environment outcome
         dr_da = torch.autograd.grad(outputs= est_y, inputs = actions, grad_outputs= dr_dy.squeeze())[0]
@@ -142,8 +141,8 @@ for ep in range(1, episodes):
         training_acc.append(print_acc)
         training_vel.append(print_vel)
 
-torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_actor_s1.pt')
-torch.save(target_states,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_targetPoints_s1.pt')
-torch.save(est_arm.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_model_s1.pt')
-torch.save(training_acc,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_training_acc_s1.pt')
-torch.save(training_vel,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_training_vel_s1.pt')
+torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_actor_s36.pt')
+torch.save(target_states,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_targetPoints_s36.pt')
+torch.save(est_arm.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_model_s36.pt')
+torch.save(training_acc,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_training_acc_s36.pt')
+torch.save(training_vel,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_training_vel_s36.pt')

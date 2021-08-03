@@ -17,16 +17,17 @@ n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
 t_print = 100
-n_arms = 100
+n_arms = 10#50#0
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
 f_points = - time_window_steps -1 # use last point with no zero action
 vel_weight = 0.005
-ln_rate = 0.00001
-std = 0.01
+ln_rate = 0.0008#0.00001
+std = 0.0119#0.01
 max_u = 15000
 th_error = 0.025
+std_decay = 0.999
 
 
 # Target endpoint, based on matlab - reach straight in front, at shoulder height
@@ -70,6 +71,9 @@ for ep in range(1,episodes):
     ep_rwd.append(torch.mean(torch.sqrt(rwd)))
     ep_vel.append(torch.mean(torch.sqrt(velocity)))
 
+    if ep % 10 == 0:  # decays works better if applied every 10 eps
+        std *= std_decay
+
 
     if ep % t_print == 0:
 
@@ -94,9 +98,9 @@ for ep in range(1,episodes):
         ep_vel = []
 
 
-torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Actor_s1_NoStopped.pt')
-torch.save(training_acc, '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Training_accur_s1_NoStopped.pt')
-torch.save(training_vel, '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Training_vel_s1_NoStopped.pt')
+torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Actor_s1_BestP_stdDecay_10arms.pt')
+torch.save(training_acc, '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Training_accur_s1_BestP_stdDecay_10arms.pt')
+torch.save(training_vel, '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Training_vel_s1_BestP_stdDecay_10arms.pt')
 
 tst_actions = (agent(target_state,True)).view(1, 2, -1)
 test_arm = Parall_Arm_model(tspan,x0,dev, n_arms=1)

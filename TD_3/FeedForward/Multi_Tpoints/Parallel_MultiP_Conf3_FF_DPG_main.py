@@ -3,8 +3,6 @@ from TD_3.FeedForward.Multi_Tpoints.Multi_FF_AC import *
 import torch
 import numpy as np
 
-# import os
-# os.environ['CUDA_LAUNCH_BLOCKING'] = "1"
 
 # Best so far
 # Implement DPG for the FeedForward arm model, inputting the desired location to a actor NN,
@@ -13,18 +11,18 @@ import numpy as np
 # and if Q value for update action is more than "some" std from this distribution, skip update to actor
 # until Q estimates back to normal, same as Conf_FF implementation, just adding a region around end-point
 
-torch.manual_seed(0)  # FIX SEED
+torch.manual_seed(1)  # FIX SEED
 
-# dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-dev = torch.device('cpu')
+#dev = torch.device('cpu')
 
-episodes = 120000
+episodes = 40000
 n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
 t_print = 100  # 0
-n_arms = 100  #
+n_arms = 100#100  # n. of arms for each target
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]  # initial condition, needs this shape
 t_step = tspan[-1] / n_RK_steps  # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
@@ -38,32 +36,20 @@ max_u = 15000 # 10000
 start_a_upd = 100  # 50#500
 th_conf = 0.85
 th_error = 0.025
+n_target_p = 50
+overall_n_arms = n_target_p * n_arms # n. of parallel simulations (i.e. n. of amrms x n. of targets)
 
 
 print("time_window_steps = ", time_window_steps, " ln_rate_c =", ln_rate_c, " ln_rate_a= ", ln_rate_a,
       " std =", std, " Confidence: ", th_conf, " Vel W: ", vel_weight)
 
-# Target endpoint, based on matlab - reach straight in front, at shoulder height
-max_p = 0.792
-n_target_p = 3
-
-x_hat_1 = 0.792
-y_hat_1 = 0
-
-x_hat_2 = 0.396
-y_hat_2 = 0.686
-
-x_hat_3 = 0.396
-y_hat_3 = -0.686
-
-target_points = torch.tensor([[x_hat_1, y_hat_1],[x_hat_2, y_hat_2], [x_hat_3, y_hat_3]])
-
-# target_points = (-max_p - max_p) * torch.rand(n_target_p, 2) + max_p
-# target_points = torch.cat([target_points[:,0:1].clamp(0),target_points[:,1:2]],dim=1)
 
 
+training_arm = FF_Parall_Arm_model(tspan, x0, dev, n_arms=overall_n_arms)
 
-training_arm = FF_Parall_Arm_model(tspan, x0, dev, n_arms=n_arms)
+# Use to randomly generate targets in front of the arm and on the max distance circumference
+target_states = training_arm.circof_random_tagrget(n_target_p)
+#target_states = torch.load('/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_targetPoints_s1_2.pt')
 
 # Initialise actor and critic
 agent = Actor_NN(dev, Output_size=n_parametrised_steps * 2, ln_rate=ln_rate_a).to(dev)
@@ -71,12 +57,8 @@ agent.apply(agent.small_weight_init)
 
 c_input_s = n_parametrised_steps * 2 + 2
 critic_1 = Critic_NN(n_arms, dev, input_size=c_input_s, ln_rate=ln_rate_c).to(dev)
-# critic_2 = Critic_NN(input_size= c_input_s, ln_rate=ln_rate_c).to(dev)
 
 
-avr_rwd = 0
-avr_vel = 0
-alpha = 0.01
 
 ep_rwd = []
 ep_vel = []
@@ -92,45 +74,39 @@ best_acc = 50
 
 for ep in range(1, episodes):
 
-    trg_idx = ep % n_target_p
-    target_state = target_points[trg_idx:trg_idx+1,:]
 
-    det_actions = agent(target_state)  # may need converting to numpy since it's a tensor
+    det_actions = agent(target_states)  # may need converting to numpy since it's a tensor
 
-    exploration = (torch.randn((n_arms, 2, n_parametrised_steps)) * std).to(dev)
+    # add noise to each action for each arm for each target
+    exploration = (torch.randn((overall_n_arms, 2, n_parametrised_steps)) * std).to(dev)
 
-    Q_actions = (det_actions.view(1, 2, -1) + exploration).detach()
-
-    # zero_actions = torch.zeros(n_arms, 2, time_window_steps).to(dev)
-    # actions = torch.cat([Q_actions * max_u, zero_actions], dim=2)
+    # need to repeat the deterministic action for each arm so can add noise to each
+    Q_actions = (det_actions.repeat(n_arms,1).view(overall_n_arms, 2, n_parametrised_steps) + exploration).detach()
 
     actions = Q_actions * max_u
 
     t, thetas = training_arm.perform_reaching(t_step, actions.detach())
 
-    rwd = training_arm.compute_rwd(thetas, target_state[0,0], target_state[0,1], f_points)
+    rwd = training_arm.multiP_compute_rwd(thetas,target_states[:,0:1],target_states[:,1:2], f_points, n_arms)
     velocity = training_arm.compute_vel(thetas, f_points)
 
     acc_rwd = rwd.clone()
-    # # Assign a rwd of -5 for when reach desired area
-    # idx = torch.sqrt(rwd) < th_error
-    # rwd[idx] = -500
-
 
     weighted_adv = rwd + vel_weight * velocity
 
-    Q_v = critic_1(target_state, Q_actions.view(n_arms, -1), False)
+    Q_v = critic_1(target_states, Q_actions.view(overall_n_arms, -1), False)
     c_loss = critic_1.update(weighted_adv, Q_v)
 
-    Tar_Q = critic_1(target_state, det_actions, True)  # want to max the advantage
+    Tar_Q = critic_1(target_states, det_actions, True)  # want to optimise for deterministic Q
 
     mean_G = torch.mean(torch.mean(weighted_adv, dim=0), dim=0)
     std_G = torch.sqrt(torch.sum((mean_G - weighted_adv) ** 2) / (n_arms - 1))
 
-    confidence = torch.abs((Tar_Q - mean_G) / std_G).detach()
-    training_confidence.append(confidence)
+    confidence = torch.mean(torch.abs((Tar_Q - mean_G) / std_G).detach()) # use mean confidence as criteria
 
-    if ep > start_a_upd and confidence <= th_conf:
+    Tar_Q = Tar_Q[confidence <= th_conf] # only select those Q for which we have high confidence
+
+    if ep > start_a_upd and Tar_Q.numel(): # check that Q is not empty before trying to update
 
         agent.update(Tar_Q)
 
@@ -151,13 +127,6 @@ for ep in range(1, episodes):
         print("BEST: ", best_acc)
         print("training accuracy: ", print_acc)
         print("training velocity: ", print_vel)
-        print("Target Q: ", torch.mean(Tar_Q.detach()))
-        print("Current Q:", torch.mean(Q_v.detach()))
-        print("Confidence: ", print_conf, "\n")
-        print("actor std: ", std)
-        print("mean G ", mean_G)
-        print("Target Q: ", Tar_Q)
-        print("std G ", std_G, '\n')
 
         if print_acc < th_error:
             break
@@ -166,26 +135,11 @@ for ep in range(1, episodes):
         ep_vel = []
         training_acc.append(print_acc)
         training_vel.append(print_vel)
-        training_actions.append(torch.mean(det_actions.detach(), dim=0))
-        training_confidence = []
 
 
-# torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/TD_3/FeedForward/Conf3_FF_DPG_Actor_1.pt')
-# torch.save(critic_1.state_dict(), '/home/px19783/Two_joint_arm/TD_3/FeedForward/Conf3_FF_DPG_Critic_1.pt')
-# torch.save(training_acc,'/home/px19783/Two_joint_arm/TD_3/FeedForward/Conf3_FF_DPG_Training_accur_1.pt')
-# torch.save(training_vel,'/home/px19783/Two_joint_arm/TD_3/FeedForward/Conf3_FF_DPG_Training_vel_1.pt')
-# torch.save(training_actions,'/home/px19783/Two_joint_arm/TD_3/FeedForward/Conf3_FF_DPG_Training_actions_1.pt')
-#
-#
-# tst_actions = (agent(target_state) * max_u).view(1, 2, -1)
-# test_arm = FF_Parall_Arm_model(tspan, x0, dev, n_arms=1)
-#
-# _, thetas = test_arm.perform_reaching(t_step, tst_actions.detach())
-#
-#
-#
-# rwd = torch.sqrt(training_arm.compute_rwd(thetas, x_hat, y_hat, f_points))
-# velocity = torch.sqrt(training_arm.compute_vel(thetas, f_points))
-#
-# print("tst rwd: ", rwd)
-# print("tst vel: ",velocity)
+
+torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/TD_3/FeedForward/Multi_Tpoints/Results/Parallel_MultiDPG_Actor_s1.pt')
+torch.save(critic_1.state_dict(), '/home/px19783/Two_joint_arm/TD_3/FeedForward/Multi_Tpoints/Results/Parallel_MultiDPG_Critic_s1.pt')
+torch.save(training_acc,'/home/px19783/Two_joint_arm/TD_3/FeedForward/Multi_Tpoints/Results/Parallel_MultiDPG_Training_accur_s1.pt')
+torch.save(training_vel,'/home/px19783/Two_joint_arm/TD_3/FeedForward/Multi_Tpoints/Results/Parallel_MultiDPG_vel_s1.pt')
+

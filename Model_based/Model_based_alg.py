@@ -10,21 +10,48 @@ class MB_alg:
 
         self.t_step = t_step
 
-        self.ModelError_th = 0.015
+        self.ModelError_th = 0.001#0.0001#0.015
         self.th_error = th_error
 
-    def update_model(self, actions, trg_y):
+    def update_model(self, actions, trg_y,target_arm):
 
         trg_y = trg_y.squeeze()
         est_y = self.est_model.perform_reaching(self.t_step,actions).squeeze()
         ep = 0
 
-        while torch.max(torch.abs(trg_y - est_y)) > self.ModelError_th:
+        ep_acc = []
+        ep_loss = []
+        max_error = torch.max(torch.abs(trg_y - est_y))
 
-           est_y = self.est_model.perform_reaching(self.t_step,actions).squeeze()
+        trg_alpha = target_arm.alpha
+        trg_omega = target_arm.omega
+
+        while max_error > self.ModelError_th:
+
            model_loss = self.est_model.update(trg_y, est_y)
-           ep +=1
+           est_y = self.est_model.perform_reaching(self.t_step,actions).squeeze()
+           ep_loss.append(model_loss)
+           max_error = torch.max(torch.abs(trg_y - est_y))
+           ep_acc.append(max_error)
+           ep += 1
 
+           if ep % 50 == 0:
+
+               avr_error = sum(ep_acc) /50
+               avr_loss = sum(ep_loss)/50
+
+               print("Model upd ep: ",ep)
+               print("avr error: ", avr_error)
+               print("avr loss: ", avr_loss)
+               print("alpha difference: ", trg_alpha - self.est_model.alpha)
+               print("omega difference: ", trg_omega - self.est_model.omega, "\n")
+               ep_acc = []
+               ep_loss = []
+
+
+        print(self.est_model.alpha)
+        print(self.est_model.omega)
+        print(self.est_model.F,"\n")
         return ep
 
 
