@@ -9,28 +9,30 @@ import numpy as np
 # steps
 # Note: the employed shape for the parallelisation of multiple targets, each with multiple arms is: n_arms x n_targets
 # so different targets for the same arm comes fist in batch shape, rather than going same target for all its arms and then move to the next target
+# ln_rate = 0.00005 works best with std = 0.01325
 
-
-torch.manual_seed(36) #torch.manual_seed(1)  # FIX SEED
-
+# hyperparam search based on seeds: [ 42, 245, 918]
 dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+seed_v = 528 # test seeds: [4, 418, 81,528]
+torch.manual_seed(seed_v) #torch.manual_seed(1)  # FIX SEED
+# first one uses ln_rate = 0.001, _2 uses ln_rate = 0.0005, _3 uses ln_rate = 0.00005
+accuracy_file = '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Results/Parallel_MultiReinf_Training_accur_10arms_'+str(seed_v)+'_4.pt'
 
-#dev = torch.device('cpu')
 
 
-episodes = 40000 #
+episodes = 35000
 n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
 t_print = 100
-n_arms = 50 # n. of arms for each target
+n_arms = 10 # n. of arms for each target
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
 f_points = - time_window_steps -1 # use last point with no zero action
 vel_weight = 0.005
-ln_rate = 0.0006#0.00001
-std = 0.0064#0.0064#0.01
+ln_rate = 0.00001 #0.00005 #0.0005#0.001 #0.0006
+std = 0.01325 #0.0064
 max_u = 15000
 th_error = 0.025
 n_target_p = 50
@@ -114,12 +116,12 @@ for ep in range(1,episodes):
         ep_vel = []
         ep_c_loss = []
 
-torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Results/Parallel_MultiReinf_Actor_comparison_BestParams_50arms_36.pt')
-torch.save(training_acc,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Results/Parallel_MultiReinf_Training_accur_comparison_BestParams_50arms_36.pt')
-torch.save(training_vel,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Results/Parallel_MultiReinf_Training_vel_comparison_BestParams_50arms_36.pt')
-torch.save(target_states,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Results/Parallel_MultiReinf_TargetPoints_comparison_BestParams_50arms_36.pt')
-torch.save(training_crict_loss,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Results/Parallel_MultiReinf_TrainingCLoss_comparison_BestParams_50arms_36.pt')
-torch.save(critic.state_dict(),'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Results/Parallel_MultiReinf_critic_comparison_BestParams_50arms_36.pt')
+torch.save(training_acc,accuracy_file)
+# torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Results/Parallel_MultiReinf_Actor_comparison_BestParams_50arms_36.pt')
+# torch.save(training_vel,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Results/Parallel_MultiReinf_Training_vel_comparison_BestParams_50arms_36.pt')
+# torch.save(target_states,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Results/Parallel_MultiReinf_TargetPoints_comparison_BestParams_50arms_36.pt')
+# torch.save(training_crict_loss,'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Results/Parallel_MultiReinf_TrainingCLoss_comparison_BestParams_50arms_36.pt')
+# torch.save(critic.state_dict(),'/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Multi_target/Results/Parallel_MultiReinf_critic_comparison_BestParams_50arms_36.pt')
 
 
 tst_actions = (agent(target_states,True)).view(n_target_p, 2, -1)

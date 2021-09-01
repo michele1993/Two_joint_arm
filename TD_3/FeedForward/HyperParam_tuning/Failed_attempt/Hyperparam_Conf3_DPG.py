@@ -19,7 +19,7 @@ x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]  # initial condit
 t_step = tspan[-1] / n_RK_steps  # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
 f_points = -time_window_steps -1 # use last point with no zero action # number of final points to average across for distance to target and velocity
 vel_weight = 0.005 #0.005
-ln_rate_c = 0.005  # 0.01 #0.001# 0.005
+#ln_rate_c = 0.005  # 0.01 #0.001# 0.005
 range_ln_rate = torch.linspace(0.00001,0.001,10)#0.00001
 
 #range_std = torch.linspace(0.001,0.05,10)

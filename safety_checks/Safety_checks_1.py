@@ -1,9 +1,5 @@
 import numpy as np
-from scipy.integrate import solve_ivp
-from Arm_model import Arm_model
-from scipy.io import savemat
-from safety_checks.Video_arm_config import Video_arm
-import torch
+from Extra_models.Arm_model import Arm_model
 
 # This script creates a matlab file with the result of the python simulation, using "discrete" ivp_solve, with
 # a simple constant input, to be compared to the matlab version, after comparison (with a matlab script), obtained

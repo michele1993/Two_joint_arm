@@ -18,8 +18,15 @@ import numpy as np
 # more stringent velocity_weight, (i.e. = 0.4) otherwise, get too much velocity.
 # exploration issue (I guess? ),
 
+# Best params (after search):  ln_rate_c = 9.99999975e-06, ln_rate_a = 7.52500026e-04, std = 0.0119
+# Seeds for hyperparam search: [37, 12, 72,  9, 75]
 
-torch.manual_seed(1)  # 16 FIX SEED
+s_file = 61 # randomly generated test seeds : 35, 71, 33, 59, 61
+torch.manual_seed(s_file)
+file_acc = '/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Training_accur_s'+str(s_file)+'_Best_arms.pt'
+file_vel = '/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Training_vel_s'+str(s_file)+'_Best_arms.pt'
+
+
 
 #dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
@@ -31,16 +38,16 @@ time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
 t_print = 100  # 0
 
-n_arms = 100#100
+n_arms = 10#100
 
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]  # initial condition, needs this shape
 t_step = tspan[-1] / n_RK_steps  # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
 f_points = -time_window_steps -1 # use last point with no zero action # number of final points to average across for distance to target and velocity
 vel_weight = 0.005 #0.005
-ln_rate_c = 5.6000e-04  # 0.01 #0.001# 0.005
-ln_rate_a = 4.5000e-04 #0.0006
-std = 0.0119#0.01#0.01#0.01  # 0.2 #0.000015#0.02
+ln_rate_c = 9.99999975e-06  # 0.01 #0.001# 0.005
+ln_rate_a = 7.52500026e-04 #0.0006
+std = 0.0119 #0.01#0.01#0.01  # 0.2 #0.000015#0.02
 max_u = 15000 # 10000
 # actor_update = 2#5 #2 #5 #4 reaches 18cm distance and stops
 start_a_upd = 100  # 50#500
@@ -48,8 +55,8 @@ th_conf = 0.85#8.25#0.85
 th_error = 0.025
 
 
-print("small init critic","time_window_steps = ", time_window_steps, " ln_rate_c =", ln_rate_c, " ln_rate_a= ", ln_rate_a,
-      " std =", std, " Confidence: ", th_conf, " Vel W: ", vel_weight)
+# print("small init critic","time_window_steps = ", time_window_steps, " ln_rate_c =", ln_rate_c, " ln_rate_a= ", ln_rate_a,
+#       " std =", std, " Confidence: ", th_conf, " Vel W: ", vel_weight)
 
 # Target endpoint, based on matlab - reach straight in front, at shoulder height
 x_hat = 0.792
@@ -71,9 +78,7 @@ critic_1 = Critic_NN(n_arms, dev, input_size=c_input_s, ln_rate=ln_rate_c).to(de
 # critic_2 = Critic_NN(input_size= c_input_s, ln_rate=ln_rate_c).to(dev)
 
 
-avr_rwd = 0
-avr_vel = 0
-alpha = 0.01
+
 
 ep_rwd = []
 ep_vel = []
@@ -147,13 +152,13 @@ for ep in range(1, episodes):
         print("BEST: ", best_acc)
         print("training accuracy: ", print_acc)
         print("training velocity: ", print_vel)
-        print("Target Q: ", torch.mean(Tar_Q.detach()))
-        print("Current Q:", torch.mean(Q_v.detach()))
-        print("Confidence: ", print_conf, "\n")
-        print("Mean actions: ", torch.mean(det_actions**2))
-        print("actor std: ", std)
-        #print("mean G ", mean_G)
-        print("Target Q: ", Tar_Q)
+        # print("Target Q: ", torch.mean(Tar_Q.detach()))
+        # print("Current Q:", torch.mean(Q_v.detach()))
+        # print("Confidence: ", print_conf, "\n")
+        # print("Mean actions: ", torch.mean(det_actions**2))
+        # print("actor std: ", std)
+        # #print("mean G ", mean_G)
+        # print("Target Q: ", Tar_Q)
         #print("std G ", std_G, '\n')
 
         # if print_acc < th_error:
@@ -166,11 +171,11 @@ for ep in range(1, episodes):
         #training_actions.append(torch.mean(det_actions.detach(), dim=0))
         training_confidence = []
 
-print("Correct best params")
-torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Actor_s1_Best_arms.pt')
-torch.save(critic_1.state_dict(), '/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Critic_s1_Best_arms.pt')
-torch.save(training_acc,'/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Training_accur_s1_Best_arms.pt')
-torch.save(training_vel,'/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Training_vel_s1_Best_arms.pt')
+print(s_file)
+#torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Actor_s1_Best_arms.pt')
+#torch.save(critic_1.state_dict(), '/home/px19783/Two_joint_arm/TD_3/FeedForward/Results/Conf3_FF_DPG_Critic_s1_Best_arms.pt')
+torch.save(training_acc,file_acc)
+torch.save(training_vel,file_vel)
 #torch.save(training_actions,'/home/px19783/Two_joint_arm/TD_3/FeedForward/Conf3_FF_DPG_Training_actions_1.pt')
 
 

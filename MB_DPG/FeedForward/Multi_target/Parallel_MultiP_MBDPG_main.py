@@ -4,10 +4,20 @@ from TD_3.FeedForward.FF_parall_arm import FF_Parall_Arm_model
 import torch
 import numpy as np
 
-# so far using fixed std, with no decay worked best, saved as ..._2
+# best params so far: ln_rate_a = 4.75000015e-05; model_lr = 5.40000014e-03; std = 0.0124 with decay
 
-torch.manual_seed(36)  # 16 FIX SEED
 dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+# hyperparam search based on seeds: [ 42, 245, 918]
+# so far using fixed std, with no decay worked best, saved as ..._2
+seed_v = 528 # test seeds: [4, 418, 81,528,702]
+torch.manual_seed(seed_v)  # 16 FIX SEED
+
+accuracy_file = '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_training_acc_test_s'+str(seed_v)+'_2.pt'
+actor_file = '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_actor_test_s'+str(seed_v)+'_2.pt'
+#TarPoints_file = '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_targetPoints_test_s'+str(seed_v)+'.pt'
+model_file = '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_model_test_s'+str(seed_v)+'_2.pt'
+# velocity_file = '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_training_vel_test_s'+str(seed_v)+'.pt'
+
 
 episodes = 35000
 n_RK_steps = 99
@@ -20,9 +30,9 @@ x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]  # initial condit
 t_step = tspan[-1] / n_RK_steps
 f_points = -time_window_steps -1 # use last point with no zero action # number of final points to average across for distance to target and velocity
 vel_weight = 0.05#0.2#0.4
-ln_rate_a = 0.00005#0.00005
-model_lr = 0.001
-std = 0.01
+ln_rate_a = 4.75000015e-05 #1.87500002e-04#working well: 0.00005
+model_lr = 5.40000014e-03 #3.40000005e-03 # working well: 0.001
+std = 0.0124 #working well: 0.01
 max_u = 15000
 start_a_upd = 500 # 1000 performs much worse
 a_size = n_parametrised_steps *2
@@ -132,17 +142,14 @@ for ep in range(1, episodes):
         print("Model loss: ", print_MLoss)
 
 
-        # if print_acc < th_error:
-        #     break
-
         ep_rwd = []
         ep_vel = []
         ep_MLoss = []
         training_acc.append(print_acc)
         training_vel.append(print_vel)
 
-torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_actor_s36.pt')
-torch.save(target_states,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_targetPoints_s36.pt')
-torch.save(est_arm.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_model_s36.pt')
-torch.save(training_acc,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_training_acc_s36.pt')
-torch.save(training_vel,'/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_training_vel_s36.pt')
+torch.save(training_acc,accuracy_file)
+torch.save(agent.state_dict(), actor_file)
+# torch.save(target_states,TarPoints_file)
+torch.save(est_arm.state_dict(), model_file)
+# torch.save(training_vel,velocity_file)

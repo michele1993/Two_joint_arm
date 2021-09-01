@@ -1,4 +1,4 @@
-from Direct_Cntrl_Parall_Arm_model import Direct_Pl_Arm_model
+from Extra_models.Direct_Cntrl_Parall_Arm_model import Direct_Pl_Arm_model
 from Vanilla_Reinf_dynamics.FeedForward.Individual_params.Vanilla_Reinf_Agent import Reinf_Agent
 import torch
 #from safety_checks.Video_arm_config import Video_arm

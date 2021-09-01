@@ -4,8 +4,18 @@ import torch
 #from safety_checks.Video_arm_config import Video_arm
 import numpy as np
 
+# Seeds for hyperparam search: [37, 12, 72,  9, 75]
+# Best params (after search) ln_rate = 0.001, std = 0.01325
+
+s_file = 61 # randomly generated test seeds : 35, 71, 33, 59, 61
+
 # Use REINFORCE to control arm reaches in a feedforward fashion
-torch.manual_seed(1)  # FIX SEED
+torch.manual_seed(s_file)
+
+acc_file = '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Training_accur_s'+str(s_file)+'_final_10arms.pt'
+vel_file = '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Training_vel_s'+str(s_file)+'_final_10arms.pt'
+
+
 
 #dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
@@ -23,8 +33,8 @@ x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial conditi
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
 f_points = - time_window_steps -1 # use last point with no zero action
 vel_weight = 0.005
-ln_rate = 0.0008#0.00001
-std = 0.0119#0.01
+ln_rate = 0.001 #0.0008#0.00001
+std = 0.01325 #0.01
 max_u = 15000
 th_error = 0.025
 std_decay = 0.999
@@ -98,9 +108,10 @@ for ep in range(1,episodes):
         ep_vel = []
 
 
-torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Actor_s1_BestP_stdDecay_10arms.pt')
-torch.save(training_acc, '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Training_accur_s1_BestP_stdDecay_10arms.pt')
-torch.save(training_vel, '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Training_vel_s1_BestP_stdDecay_10arms.pt')
+print(s_file)
+#torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Actor_s35_final_10arms.pt')
+torch.save(training_acc, acc_file)
+torch.save(training_vel, vel_file)
 
 tst_actions = (agent(target_state,True)).view(1, 2, -1)
 test_arm = Parall_Arm_model(tspan,x0,dev, n_arms=1)
