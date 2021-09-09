@@ -16,9 +16,9 @@ class V_Memory_B:
         self.dev = dev
 
         # Intialise Tensor buffer for each compotent on CPU to avoid running out of memory
-        self.target_state_buf = torch.zeros(self.size,s_space).to(self.dev)
-        self.actions_buf = torch.zeros(self.size,2,a_space).to(self.dev)
-        self.rwd_buf = torch.zeros(self.size,1).to(self.dev)
+        self.target_state_buf = torch.zeros((self.size,s_space)).to(self.dev)
+        self.actions_buf = torch.zeros((self.size,a_space)).to(self.dev)
+        self.rwd_buf = torch.zeros((self.size,1)).to(self.dev)
 
 
 

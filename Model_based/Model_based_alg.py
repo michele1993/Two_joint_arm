@@ -30,9 +30,10 @@ class MB_alg:
 
            model_loss = self.est_model.update(trg_y, est_y)
            est_y = self.est_model.perform_reaching(self.t_step,actions).squeeze()
-           ep_loss.append(model_loss)
+           ep_loss.append(model_loss.detach())
            max_error = torch.max(torch.abs(trg_y - est_y))
-           ep_acc.append(max_error)
+           #max_error = torch.mean(torch.abs(trg_y - est_y))
+           ep_acc.append(max_error.detach())
            ep += 1
 
            if ep % 50 == 0:
@@ -40,8 +41,10 @@ class MB_alg:
                avr_error = sum(ep_acc) /50
                avr_loss = sum(ep_loss)/50
 
+               self.est_model.ln_decay()
+
                print("Model upd ep: ",ep)
-               print("avr error: ", avr_error)
+               print("avr max error: ", avr_error)
                print("avr loss: ", avr_loss)
                print("alpha difference: ", trg_alpha - self.est_model.alpha)
                print("omega difference: ", trg_omega - self.est_model.omega, "\n")
@@ -49,9 +52,10 @@ class MB_alg:
                ep_loss = []
 
 
+        print(max_error)
         print(self.est_model.alpha)
-        print(self.est_model.omega)
-        print(self.est_model.F,"\n")
+        print(self.est_model.omega,"\n")
+        #print(self.est_model.F,"\n")
         return ep
 
 

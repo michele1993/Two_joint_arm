@@ -7,7 +7,9 @@ import torch
 import numpy as np
 import subprocess
 
-# use following arguments: -c 1 -t 70 -m 10  --cmd python testSeeds_MDDPG_send_training.py
+# use following arguments: -c 1 -t 70 -m 10  --cmd python mBuffer_MBDPG_send_training_testSeeds.py # testSeeds_MDDPG_send_training.py
+
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--cpus',    '-c', type=int, nargs='?', default=1)
@@ -29,8 +31,8 @@ args = sys.argv[1:cmd_idx]
 args = parser.parse_args(args)
 cmd = ' '.join(sys.argv[(1+cmd_idx):])
 
-actor_ln = torch.tensor([1.87500002e-04])
-model_ln = torch.tensor([8.34999979e-03])
+actor_ln = torch.tensor([5.1250e-04]) # from optim: 5.1250e-04; tried, but failed: 1.0250e-03; for without buffer: 1.87500002e-04
+model_ln = torch.tensor([8.3500e-03]) # from optim:  8.3500e-03
 
 
 

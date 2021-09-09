@@ -1,6 +1,6 @@
 from TD_3.FeedForward.FF_parall_arm import FF_Parall_Arm_model
 from TD_3.FeedForward.Extra_models.FF_AC_DPG_MB import *
-from TD_3.FeedForward.Extra_models.Van_Replay_buffer import V_Memory_B
+from TD_3.FeedForward.Buffered_DDPG.Van_Replay_buffer import V_Memory_B
 import torch
 import numpy as np
 #import os

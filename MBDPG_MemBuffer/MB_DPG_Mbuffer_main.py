@@ -93,8 +93,9 @@ for ep in range(1, episodes):
 
     weight_rwd = torch.sum(rwd + vel * vel_weight)
 
+
     # Store transition in the buffer
-    M_buffer.store(weight_rwd.detach(),actions.detach().view(n_arms,a_size),thetas)
+    M_buffer.store(actions.detach().view(n_arms,a_size),thetas) # weight_rwd.detach(),
 
     #Sampled from the buffer
 
@@ -113,8 +114,7 @@ for ep in range(1, episodes):
 
     if ep > start_a_upd: #and ep % actor_update ==0:
 
-
-        # Note: use sum to obtain a scalar value, which can be passed to autograd.grad, it's fine since all the grad for each arm are independent
+        # ---- Note: use sum to obtain a scalar value, which can be passed to autograd.grad, it's fine since all the grad for each arm are independent
 
         # compute gradient of rwd with respect to outcome
         dr_dy = torch.autograd.grad(outputs=weight_rwd, inputs = diff_thetas)[0]

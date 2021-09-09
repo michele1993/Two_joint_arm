@@ -21,9 +21,11 @@ ln_rate_a = 0.00001
 velocity_weight = 0.005
 max_u = 15000
 th_error = 0.025
-n_arms = 100
-Model_ln_rate = 0.1#0.01 #0.08
+n_arms = 10 #100
+Model_ln_rate = 0.05#0.01 #0.08
 std = 0.01
+
+# Issues: if I use a large ln_rate it converges very quickly but with wrong parameters
 
 # Target endpoint, based on matlab - reach straight in front, at shoulder height
 x_hat = 0.792
@@ -66,9 +68,8 @@ for ep in range(Overall_episodes):
         print("Eps to update model: ", modelUpd_eps)
         print(target_arm.alpha)
         print(target_arm.omega)
-        print(target_arm.F)
+        #print(target_arm.F)
 
-        exit()
         MB_alg.update_actor(target_state)
 
 

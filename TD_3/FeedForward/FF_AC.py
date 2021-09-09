@@ -84,12 +84,12 @@ class Actor_NN(nn.Module):
 class Critic_NN(nn.Module):
 
 
-    def __init__(self,n_arms,dev,input_size = 202,h1_s = 256,h2_s = 256, Output_size = 1,ln_rate = 1e-3):
+    def __init__(self,batch_s,dev,input_size = 202,h1_s = 256,h2_s = 256, Output_size = 1,ln_rate = 1e-3):
 
         super().__init__()
 
         self.input_s = input_size
-        self.n_arms = n_arms
+        self.batch_s = batch_s
         self.dev = dev
 
         self.l1 = nn.Linear(input_size,h1_s)
@@ -101,7 +101,7 @@ class Critic_NN(nn.Module):
     def forward(self, s,a, det):
 
         if not det: # for deterministic actions only use 1 arm, since all the same
-            s = s.repeat(self.n_arms,1).to(self.dev)
+            s = s.repeat(self.batch_s,1).to(self.dev)
 
         x = F.relu(self.l1(torch.cat([s, a], dim=1)))
 

@@ -51,6 +51,8 @@ class MB_FF_Arm_model(nn.Module):
             self.alpha = nn.Parameter(torch.randn(1) * 0.1).to(self.dev)
             self.omega = nn.Parameter(torch.randn(1) * 0.1).to(self.dev)
             self.optimiser = opt.Adam(self.parameters(), ln_rate)
+            decayRate = 1
+            self.my_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=self.optimiser, gamma=decayRate)
 
         else:
             self.alpha = m1 * lc1 ** 2 + I1 + m2 * lc2 ** 2 + I2 + m2 * self.l1 ** 2
@@ -79,6 +81,10 @@ class MB_FF_Arm_model(nn.Module):
 
         np.random.seed(1)
         self.F = torch.Tensor(np.random.rand(2, 2)).to(self.dev) * 15
+
+    def ln_decay(self):
+
+        self.my_lr_scheduler.step()
 
     def update(self, target, estimate):
 
@@ -183,6 +189,7 @@ class MB_FF_Arm_model(nn.Module):
 
         return (x_hat - x_c)**2 + (y_hat - y_c)**2 #torch.sqrt()# maintain original dimension for product with log_p
 
+
     def compute_vel(self,y, f_points):
 
         t1 = y[f_points:, :,0] # [-1:,
@@ -194,6 +201,7 @@ class MB_FF_Arm_model(nn.Module):
         dy = self.l1 * torch.cos(t1) * dt1 + self.l2 * (dt1 + dt2) * torch.cos((t1 + t2))
 
         return dx**2 + dy**2 #torch.sqrt() # maintain original dimension to sum with rwd
+
 
     def compute_accel(self, vel, t_step):
 

@@ -85,7 +85,7 @@ class Mbuffer_MBDPG_train:
             weight_rwd = torch.sum(rwd + vel * self.vel_weight)
 
             # Store transition in the buffer
-            self.M_buffer.store(weight_rwd.detach(), actions.detach().view(self.n_arms, self.a_size), thetas)
+            self.M_buffer.store( actions.detach().view(self.n_arms, self.a_size), thetas) #weight_rwd.detach(),
 
             # Sampled from the buffer
 
