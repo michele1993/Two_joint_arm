@@ -7,7 +7,7 @@ import torch
 import numpy as np
 import subprocess
 
-# use following arguments: -c 1 -t 70  --cmd python Mbuffer_MBDPG_send_training_parsArg.py
+# use following arguments: -c 1 -t 70 -m 10  --cmd python Mbuffer_MBDPG_send_training_parsArg.py
 # or
 # MB_DPG_send_training_parsArg.py
 
@@ -31,7 +31,7 @@ args = sys.argv[1:cmd_idx]
 args = parser.parse_args(args)
 cmd = ' '.join(sys.argv[(1+cmd_idx):])
 
-actor_ln = torch.linspace(0.000025,0.001,7)
+actor_ln = torch.linspace(0.000005,0.0005,7)
 model_ln = torch.linspace(0.0001,0.01,7)
 
 
@@ -73,7 +73,7 @@ if args.autoname:
 else:
 
      np.random.seed(1)
-     seeds = np.random.choice(100,size=5)
+     seeds = np.random.choice(1000,size=5)
 
      # Train on five different seeds
 

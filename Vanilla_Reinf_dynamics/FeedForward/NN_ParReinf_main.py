@@ -7,7 +7,7 @@ import numpy as np
 # Seeds for hyperparam search: [37, 12, 72,  9, 75]
 # Best params (after search) ln_rate = 0.001, std = 0.01325
 
-s_file = 61 # randomly generated test seeds : 35, 71, 33, 59, 61
+s_file = 767 # randomly generated test seeds : 35, 71, 33, 59, 61
 
 # Use REINFORCE to control arm reaches in a feedforward fashion
 torch.manual_seed(s_file)
@@ -22,19 +22,19 @@ vel_file = '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Resul
 dev = torch.device('cpu')
 
 
-episodes = 15000
+episodes = 5001#15000
 n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
 t_print = 100
-n_arms = 10#50#0
+n_arms = 1 #50#10
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
 t_step = tspan[-1]/n_RK_steps # torch.Tensor([tspan[-1]/n_RK_steps]).to(dev)
 f_points = - time_window_steps -1 # use last point with no zero action
 vel_weight = 0.005
-ln_rate = 0.001 #0.0008#0.00001
-std = 0.01325 #0.01
+ln_rate = 1.00000005e-03 # best for 10 arms: 0.001
+std = 1.73333343e-02 # best for 10 arms: 0.01325
 max_u = 15000
 th_error = 0.025
 std_decay = 0.999
@@ -96,7 +96,7 @@ for ep in range(1,episodes):
         print("episode: ", ep)
         print("BEST: ", best_acc)
         print("training accuracy: ",print_acc)
-        print("training velocity: ", print_vel)
+        print("training velocity: ", print_vel,"\n")
 
         training_acc.append(print_acc)
         training_vel.append(print_vel)
@@ -108,10 +108,10 @@ for ep in range(1,episodes):
         ep_vel = []
 
 
-print(s_file)
+#print(s_file)
 #torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/NN_FF_Reinf_Actor_s35_final_10arms.pt')
-torch.save(training_acc, acc_file)
-torch.save(training_vel, vel_file)
+# torch.save(training_acc, acc_file)
+# torch.save(training_vel, vel_file)
 
 tst_actions = (agent(target_state,True)).view(1, 2, -1)
 test_arm = Parall_Arm_model(tspan,x0,dev, n_arms=1)

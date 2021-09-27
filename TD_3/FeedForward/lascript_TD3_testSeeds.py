@@ -7,7 +7,7 @@ import torch
 import numpy as np
 import subprocess
 
-# use following arguments: -c 1 -t 2  --cmd <python MB_DPG/FeedForward/HyperParam_tuning/send_training.py
+# use following arguments: -c 1 -t 70 -m 10  --cmd python TD3_buffer_send_trainig_parsArg.py
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--cpus',    '-c', type=int, nargs='?', default=1)
@@ -29,8 +29,8 @@ args = sys.argv[1:cmd_idx]
 args = parser.parse_args(args)
 cmd = ' '.join(sys.argv[(1+cmd_idx):])
 
-actor_ln = torch.tensor([7.52500026e-04])
-critic_ln = torch.tensor([9.99999975e-06 ])
+actor_ln = torch.tensor([1.75000023e-04]) #torch.tensor([7.52500026e-04])
+critic_ln = torch.tensor([9.99999975e-06 ]) #torch.tensor([9.99999975e-06 ])
 
 
 

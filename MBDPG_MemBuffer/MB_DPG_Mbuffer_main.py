@@ -8,7 +8,7 @@ from MBDPG_MemBuffer.Memory_Buffer import MemBuffer
 # Best params from search: model_lr = 8.3500e-03; ln_rate_a = 5.1250e-04; std = 0.0124
 
 
-s_file = 78 # randomly generated test seeds : 35, 71, 33, 59, 61
+s_file = 74 # randomly generated test seeds : 35, 71, 33, 59, 61
 torch.manual_seed(s_file)
 
 acc_file = '/Users/michelegaribbo/PycharmProjects/Two_joint_arm/MBDPG_MemBuffer/Results/Mbuffer_MBDPG_trialAccuracy_s'+str(s_file)+'_uniform.pt'
@@ -19,28 +19,31 @@ vel_file = '/Users/michelegaribbo/PycharmProjects/Two_joint_arm/MBDPG_MemBuffer/
 # dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 dev = torch.device('cpu')
 
-episodes = 5000
+episodes = 5001
 n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
 t_print = 100
-n_arms = 10#10
+n_arms = 1#0#10
 tspan = [0, 0.4]
 x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]  # initial condition, needs this shape
 t_step = tspan[-1] / n_RK_steps
 f_points = -time_window_steps -1 # use last point with no zero action # number of final points to average across for distance to target and velocity
 vel_weight = 0.05
-model_lr = 8.3500e-03 #3.40000005e-03
-ln_rate_a = 5.1250e-04 #1.87500002e-04
+
+model_lr = 0.0034 #8.3500e-03 #3.40000005e-03
+ln_rate_a = 0.0002525 #5.1250e-04 #1.87500002e-04
+
+
 std = 0.0124
 max_u = 15000
-start_a_upd = 10#500
+start_a_upd = 100#500
 a_size = n_parametrised_steps * 2
 est_y_size = 4 # attempt to predict only 4 necessary components to estimated the rwd (ie. 2 angles and 2 angle vels)
-actor_update = 3
+#actor_update = 3
 std_decay = 0.99#0.999
 model_batch_s = 100#200
-buffer_size = 5000
+buffer_size = 500#5000
 
 # Target endpoint, based on matlab - reach straight in front, at shoulder height
 x_hat = 0.792
@@ -69,6 +72,11 @@ training_vel = []
 training_actions = []
 
 #torch.set_printoptions(threshold=10_000)
+
+n_aver_val = 5  # number of accuracy and velocity values averaged across for final value
+aver_counter = 0
+aver_acc = torch.zeros(n_aver_val)
+aver_vel = torch.zeros(n_aver_val)
 
 for ep in range(1, episodes):
 
@@ -116,13 +124,15 @@ for ep in range(1, episodes):
 
         # ---- Note: use sum to obtain a scalar value, which can be passed to autograd.grad, it's fine since all the grad for each arm are independent
 
+
         # compute gradient of rwd with respect to outcome
         dr_dy = torch.autograd.grad(outputs=weight_rwd, inputs = diff_thetas)[0]
 
         est_y = est_arm(actions.view(n_arms, a_size)) # re-estimate values since model has been updated
 
+
         # compute gradient of rwd with respect to actions, using environment outcome
-        dr_da = torch.autograd.grad(outputs= est_y, inputs = actions, grad_outputs= dr_dy.squeeze())[0]
+        dr_da = torch.autograd.grad(outputs= est_y, inputs = actions, grad_outputs= dr_dy.squeeze(0))[0]
 
         agent.MB_update(actions,dr_da)
 
@@ -150,7 +160,14 @@ for ep in range(1, episodes):
         print("training velocity: ", print_vel)
         print("Model loss: ", print_MLoss)
 
+        # Computer average accuracy and velocity of past 500 eps:
+        indx = aver_counter % n_aver_val
+        aver_acc[indx] = print_acc
+        aver_vel[indx] = print_vel
+        aver_counter += 1
 
+        print("\n Aver Acc: ",aver_acc)
+        print("Aver Vel: ", aver_vel, "\n")
         # if print_acc < th_error:
         #     break
 
@@ -164,5 +181,5 @@ print(s_file)
 
 # torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_actor_final_s35.pt')
 # torch.save(est_arm.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_model_final_s35.pt')
-torch.save(training_acc,acc_file)
-torch.save(training_vel,vel_file)
+# torch.save(training_acc,acc_file)
+# torch.save(training_vel,vel_file)

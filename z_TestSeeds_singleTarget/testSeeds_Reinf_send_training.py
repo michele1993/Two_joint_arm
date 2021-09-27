@@ -16,15 +16,16 @@ actor_ln = args.actorLr
 i = args.counter
 
 torch.manual_seed(int(seed))  # re-set seeds everytime to ensure same initialisation
-episodes = 15000
+episodes = 10001
+n_arms = 1
 dev = torch.device('cpu')
 
 # redefine everything at each iteration to avoid potential memory leakages
-Reinf = Reinf_train(float(std), float(actor_ln), episodes, dev)
+Reinf = Reinf_train(float(std), float(actor_ln), episodes,n_arms, dev)
 
 training_acc = Reinf.train()
 values = np.array(training_acc)
 
 print(values, "\n")
 np.save('/home/px19783/Two_joint_arm/Vanilla_Reinf_dynamics/FeedForward/Results/Reinf_FF_testSeeds_s' + str(
-    seed) + "_" + str(i) + '.npy', values)
+    seed) + "_" + str(i) + '_oneArm.npy', values)

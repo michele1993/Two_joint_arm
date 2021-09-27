@@ -1,7 +1,9 @@
 import torch
 import argparse
 import numpy as np
-from MBDPG_MemBuffer.MBuffer_train_testSeeds import Mbuffer_MBDPG_train
+from MBDPG_MemBuffer.HyperParam_tuning.MemB_MBDPG_train import Mbuffer_MBDPG_train
+
+# For hyperparam search
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed',    '-s', type=int, nargs='?', default=1)
@@ -17,15 +19,15 @@ i = args.counter
 
 torch.manual_seed(int(seed))  # re-set seeds everytime to ensure same initialisation
 std = 0.0124
-episodes = 7001
+episodes = 5001
+n_arms = 1
 dev = torch.device('cpu')
 
 # redefine everything at each iteration to avoid potential memory leakages
-MBDPG = Mbuffer_MBDPG_train(float(model_ln), float(actor_ln), std, episodes, dev)
-training_acc = MBDPG.train()
+Mbuffer_MBDPG = Mbuffer_MBDPG_train(float(model_ln), float(actor_ln), std, episodes, n_arms,dev)
+training_acc, training_vel = Mbuffer_MBDPG.train()
 
-values = np.array(training_acc)
-
+values = np.array([training_acc, training_vel, model_ln, actor_ln])
 print(values, "\n")
-np.save('/home/px19783/Two_joint_arm/MBDPG_MemBuffer/Results/MbufferMB_DPG_FF_testSeeds_s' + str(
-    seed) + "_" + str(i) + '_3.npy', values)
+np.save('/home/px19783/Two_joint_arm/MBDPG_MemBuffer/HyperParam_tuning/Results/Mbuffer_MBDPG_HyperParameter_s' + str(
+    seed) + "_" + str(i) + '_oneArm.npy', values)

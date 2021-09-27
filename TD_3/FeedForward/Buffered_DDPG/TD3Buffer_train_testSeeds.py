@@ -27,7 +27,7 @@ class TD3_train:
         self.std = std
         self.max_u = 15000
         self.start_a_upd = 100
-        self.actor_upd = 1 #2
+        self.actor_upd = 2
         self.a_size = self.n_parametrised_steps * 2
         self.batch_size = 100
         self.buffer_size = 5000
@@ -55,7 +55,7 @@ class TD3_train:
     def train(self):
 
         ep_rwd = []
-        ep_vel = []
+        training_acc = []
 
 
         for ep in range(1, self.episodes):
@@ -96,16 +96,12 @@ class TD3_train:
                 self.agent.update(Tar_Q)
 
             ep_rwd.append(torch.mean(torch.sqrt(acc_rwd)))
-            ep_vel.append(torch.mean(torch.sqrt(velocity)))
 
             if ep % self.t_print == 0:
 
                 print_acc = sum(ep_rwd) / self.t_print
-                print_vel = sum(ep_vel) / self.t_print
 
                 ep_rwd = []
-                ep_vel = []
-                training_acc = print_acc
-                training_vel = print_vel
+                training_acc.append(print_acc)
 
-        return training_acc, training_vel
+        return training_acc

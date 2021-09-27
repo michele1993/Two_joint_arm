@@ -7,7 +7,7 @@ import numpy as np
 
 class Reinf_train:
 
-    def __init__(self,std,actor_ln,episodes,dev):
+    def __init__(self,std,actor_ln,episodes,n_arms,dev):
 
 
         self.episodes = episodes
@@ -15,7 +15,7 @@ class Reinf_train:
         self.time_window_steps = 0
         self.n_parametrised_steps = self.n_RK_steps - self.time_window_steps
         self.t_print = 100
-        self.n_arms = 10#50#100
+        self.n_arms = n_arms #50#100
         self.tspan = [0, 0.4]
         self.x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]] # initial condition, needs this shape
         self.t_step = self.tspan[-1]/self.n_RK_steps

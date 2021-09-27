@@ -1,7 +1,7 @@
 import torch
 import argparse
 import numpy as np
-from TD_3.FeedForward.Buffered_DDPG.HyperParam_tuning.TD3_buffer_train import TD3_train
+from TD_3.FeedForward.Buffered_DDPG.TD3Buffer_train_testSeeds import TD3_train
 
 # For hyperparam search
 
@@ -27,14 +27,14 @@ dev = torch.device('cpu')
 
 torch.manual_seed(int(seed))  # re-set seeds everytime to ensure same initialisation
 std = 0.0119
-episodes = 5001
+episodes = 10001
 n_arms = 1
 
 # redefine everything at each iteration to avoid potential memory leakages
-TD3 = TD3_train(float(critic_ln), float(actor_ln), std, episodes,n_arms, dev)
-training_acc, training_vel = TD3.train()
+TD3 = TD3_train(float(critic_ln), float(actor_ln), std, episodes, n_arms,dev)
+training_acc = TD3.train()
 
-values = np.array([training_acc, training_vel, critic_ln, actor_ln])
+values = np.array(training_acc)
 print(values, "\n")
-np.save('/home/px19783/Two_joint_arm/TD_3/FeedForward/Buffered_DDPG/HyperParam_tuning/Results/DDPG_FF_HyperParameter_s' + str(
+np.save('/home/px19783/Two_joint_arm/TD_3/FeedForward/Buffered_DDPG/Result/DDPG_FF_testSeeds_s' + str(
     seed) + "_" + str(i) + '_oneArm.npy', values)

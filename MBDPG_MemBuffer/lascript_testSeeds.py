@@ -7,7 +7,7 @@ import torch
 import numpy as np
 import subprocess
 
-# use following arguments: -c 1 -t 70 -m 10  --cmd python mBuffer_MBDPG_send_training_testSeeds.py # testSeeds_MDDPG_send_training.py
+# use following arguments: -c 1 -t 20 -m 10  --cmd python mBuffer_MBDPG_send_training_testSeeds.py # testSeeds_MDDPG_send_training.py
 
 
 
@@ -31,9 +31,13 @@ args = sys.argv[1:cmd_idx]
 args = parser.parse_args(args)
 cmd = ' '.join(sys.argv[(1+cmd_idx):])
 
-actor_ln = torch.tensor([5.1250e-04]) # from optim: 5.1250e-04; tried, but failed: 1.0250e-03; for without buffer: 1.87500002e-04
-model_ln = torch.tensor([8.3500e-03]) # from optim:  8.3500e-03
+# multiple arms:
+#actor_ln = torch.tensor([5.1250e-04]) # from optim: 5.1250e-04; tried, but failed: 1.0250e-03; for without buffer: 1.87500002e-04
+#model_ln = torch.tensor([8.3500e-03]) # from optim:  8.3500e-03
 
+# One arm:
+actor_ln = torch.tensor([0.0002525])
+model_ln = torch.tensor([0.0034])
 
 
 
@@ -73,7 +77,13 @@ if args.autoname:
 else:
 
      np.random.seed(1)
-     seeds = np.random.choice([i for i in range(0, 1000) if i not in [37, 12, 72,  9, 75,35, 71, 33, 59, 61]],size=95)
+
+     # Multiple arms:
+     #seeds = np.random.choice([i for i in range(0, 1000) if i not in [37, 12, 72,  9, 75,35, 71, 33, 59, 61]],size=95)
+
+     # One arm:
+     seeds = np.random.choice([i for i in range(0, 1000) if i not in [37, 235, 908,  72, 767]], size=10)
+
      i = 1
      for seed in seeds:
         for md in model_ln:

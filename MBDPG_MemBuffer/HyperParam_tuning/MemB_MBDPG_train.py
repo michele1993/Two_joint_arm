@@ -7,7 +7,7 @@ from MBDPG_MemBuffer.Memory_Buffer import MemBuffer
 
 class Mbuffer_MBDPG_train:
 
-    def __init__(self,model_ln,actor_ln,std,episodes,dev):
+    def __init__(self,model_ln,actor_ln,std,episodes,n_arms,dev):
 
         self.dev = dev
         self.episodes = episodes
@@ -15,21 +15,21 @@ class Mbuffer_MBDPG_train:
         self.time_window_steps = 0
         self.n_parametrised_steps = self.n_RK_steps - self.time_window_steps
         self.t_print = 100
-        self.n_arms = 10  # 10
+        self.n_arms = n_arms  # 10
         self.tspan = [0, 0.4]
         self.x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]  # initial condition, needs this shape
         self.t_step = self.tspan[-1] / self.n_RK_steps
         self.f_points = -self.time_window_steps - 1  # use last point with no zero action # number of final points to average across for distance to target and velocity
         self.vel_weight = 0.05  # 0.2#0.4
-        self.start_a_upd = 500  # 1000 performs much worse
+        self.start_a_upd = 100 # 500  # 1000 performs much worse
         self.a_size = self.n_parametrised_steps * 2
         self.est_y_size = 4  # attempt to predict only 4 necessary components to estimated the rwd (ie. 2 angles and 2 angle vels)
-        self.actor_update = 3
+        #self.actor_update = 3 # Not used
         self.std_decay = 0.99
         self.max_u = 15000
         self.std = std
         self.model_batch_s = 100
-        buffer_size = 5000
+        buffer_size = 500 # 5000
 
         # Target endpoint, based on matlab - reach straight in front, at shoulder height
         self.x_hat = 0.792
@@ -109,7 +109,7 @@ class Mbuffer_MBDPG_train:
                 est_y = self.est_arm(actions.view(self.n_arms, self.a_size))  # re-estimate values since model has been updated
 
                 # compute gradient of rwd with respect to actions, using environment outcome
-                dr_da = torch.autograd.grad(outputs=est_y, inputs=actions, grad_outputs=dr_dy.squeeze())[0]
+                dr_da = torch.autograd.grad(outputs=est_y, inputs=actions, grad_outputs=dr_dy.squeeze(0))[0]
 
                 self.agent.MB_update(actions, dr_da)
 

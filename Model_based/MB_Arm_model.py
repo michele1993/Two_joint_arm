@@ -2,8 +2,8 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as opt
-
-
+from math import pi, cos, sin
+from random import random
 
 
 
@@ -46,27 +46,36 @@ class MB_FF_Arm_model(nn.Module):
         I1 = m1 * (self.l1 * 0.322) ** 2  # with respect to center of mass of arm
         I2 = m2 * (self.l2 * 0.468) ** 2  # with respect to center of mass of forearm
 
-        if trainable:
+        # if trainable:
+        # #
+        # #     self.alpha = nn.Parameter(torch.randn(1) * 0.1).to(self.dev)
+        #     self.omega = nn.Parameter(torch.randn(1) * 0.1).to(self.dev)
+        #     self.optimiser = opt.Adam(self.parameters(), ln_rate)
+        # #     decayRate = 1
+        # #     self.my_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=self.optimiser, gamma=decayRate)
+        # #
+        # else:
+        # #     self.alpha = m1 * lc1 ** 2 + I1 + m2 * lc2 ** 2 + I2 + m2 * self.l1 ** 2
+        #      self.omega = 2 * m2 * self.l1 * lc2
 
-            self.alpha = nn.Parameter(torch.randn(1) * 0.1).to(self.dev)
-            self.omega = nn.Parameter(torch.randn(1) * 0.1).to(self.dev)
-            self.optimiser = opt.Adam(self.parameters(), ln_rate)
-            decayRate = 1
-            self.my_lr_scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer=self.optimiser, gamma=decayRate)
-
-        else:
-            self.alpha = m1 * lc1 ** 2 + I1 + m2 * lc2 ** 2 + I2 + m2 * self.l1 ** 2
-            self.omega = 2 * m2 * self.l1 * lc2
-
-        # self.alpha = m1 * lc1 ** 2 + I1 + m2 * lc2 ** 2 + I2 + m2 * self.l1 ** 2
-        # self.omega = 2 * m2 * self.l1 * lc2
+        self.alpha = m1 * lc1 ** 2 + I1 + m2 * lc2 ** 2 + I2 + m2 * self.l1 ** 2
+        self.omega = 2 * m2 * self.l1 * lc2
 
         M22 = torch.Tensor([m2 * lc2 ** 2 + I2]).to(self.dev)
         self.M22 = M22.repeat(self.n_arms,1)
 
         self.C22 = torch.Tensor([[0]]).expand(self.n_arms, 1).to(self.dev)
 
-        self.beta = m2 * lc2**2 + I2
+        if trainable:
+            self.beta = nn.Parameter(torch.abs(torch.randn(1) * 0.1)).to(self.dev)
+            self.optimiser = opt.Adam(self.parameters(), ln_rate)
+
+        else:
+
+            self.beta = m2 * lc2 ** 2 + I2
+
+
+        #self.beta = m2 * lc2 ** 2 + I2
         self.delta = m2 * self.l1 * lc2
 
         # if trainable:
@@ -201,6 +210,41 @@ class MB_FF_Arm_model(nn.Module):
         dy = self.l1 * torch.cos(t1) * dt1 + self.l2 * (dt1 + dt2) * torch.cos((t1 + t2))
 
         return dx**2 + dy**2 #torch.sqrt() # maintain original dimension to sum with rwd
+
+    # Generate n random points along the circumference reacheable by the arm
+    def circof_random_tagrget(self,n):
+
+        radius = self.l1 + self.l2
+        points = []
+        quadrants = [-pi/2, pi/2] # define for
+
+        for i in range(n):
+            count = i % 2
+            theta = random() * quadrants[count]
+            x = radius * cos(theta)
+            y = radius * sin(theta)
+            points.append([x,y])
+
+        # Plot to show if points correctly generated
+        # plt.scatter(*zip(*points))
+        # plt.show()
+
+        return torch.tensor(points).to(self.dev)
+
+
+    # Use this method to compute rwd when have multiple tatget x_hat, y_hat
+    def multiP_compute_rwd(self,y, x_hat,y_hat, f_points,target_n_arms): # n_arms for each target, different from self.n_arms which refers to over all n of arms
+
+        #[x_c, y_c] = self.convert_coord(y[-1:, :,0], y[-1:,:, 1])
+        [x_c, y_c] = self.convert_coord(y[f_points:, :, 0], y[f_points:, :, 1])
+
+
+        # repeat target for each arm, matching x_c and y_c dimensions
+        x_hat = x_hat.repeat(1,target_n_arms,1)
+        y_hat = y_hat.repeat(1,target_n_arms,1)
+
+        return (x_hat - x_c)**2 + (y_hat - y_c)**2
+
 
 
     def compute_accel(self, vel, t_step):
