@@ -29,4 +29,4 @@ values = np.array(training_acc)
 
 print(values, "\n")
 np.save('/home/px19783/Two_joint_arm/MBDPG_MemBuffer/Results/MbufferMB_DPG_FF_testSeeds_s' + str(
-    seed) + "_" + str(i) + '_oneArm_Anaconda.npy', values)
+    seed) + "_" + str(i) + '_oneArm.npy', values) # '_oneArm_Anaconda.npy'

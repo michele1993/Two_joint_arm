@@ -103,7 +103,7 @@ for ep in range(1, episodes):
     spl_t_state, spl_a, spl_rwd = M_buffer.sample_transition()
 
 
-    Q_v = critic_1(spl_t_state, spl_a, True)
+    Q_v = critic_1(spl_t_state, spl_a, True) # use True since by sampling from buffer, already repeated the target_states
 
     c_loss = critic_1.update(spl_rwd, Q_v)
 
@@ -112,7 +112,7 @@ for ep in range(1, episodes):
 
     if ep > start_a_upd and  ep % actor_upd == 0:
 
-        Tar_Q = critic_1(target_state, det_actions, True)  # want to max the advantage
+        Tar_Q = critic_1(target_state, det_actions, True) # use True since by sampling from buffer, already repeated the target_states
 
         agent.update(Tar_Q)
 

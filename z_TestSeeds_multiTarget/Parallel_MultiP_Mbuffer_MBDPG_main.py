@@ -8,15 +8,22 @@ import argparse
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--seed',    '-s', type=int, nargs='?', default=1)
-parser.add_argument('--modelLr',    '-m', type=float, nargs='?')
-parser.add_argument('--actorLr',   '-a', type=float, nargs='?')
+# Default values represent best values from hyperparam search:
+parser.add_argument('--modelLr',    '-m', type=float, nargs='?', default=5.40000014e-03)
+parser.add_argument('--actorLr',   '-a', type=float, nargs='?', default= 5.2500e-05)
 parser.add_argument('--counter',   '-i', type=int, nargs='?')
+parser.add_argument('--hyperparam_search',   '-hs', type=bool, nargs='?', default=False)
 
 args = parser.parse_args()
 seed = args.seed
 i = args.counter
+model_ln = args.modelLr
+actor_ln = args.actorLr
+search_hyperParam = args.hyperparam_search
+
 
 # best params so far: ln_rate_a = 4.75000015e-05; model_lr = 5.40000014e-03; std = 0.0124 with decay
+#_3 no std decay, works worse; _2  std decay: 0.999 works best; otherwise: 0.99
 
 dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 # hyperparam search based on seeds: [ 42, 245, 918]
@@ -24,13 +31,21 @@ dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 #seed_v = 528 #528 # test seeds: [4, 418, 81,528,]#702
 torch.manual_seed(seed)  # 16 FIX SEED
 
-#_3 no std decay, works worse; _2  std decay: 0.999 works best; otherwise: 0.99
-accuracy_file = '/home/px19783/Two_joint_arm/MBDPG_MemBuffer/Multi_target/Result/MultiPMB_MbufferDPG_training_acc_test_s'+str(seed)+'_'+str(i)+'_oneArm.pt'
-actor_file = '/home/px19783/Two_joint_arm/MBDPG_MemBuffer/Multi_target/Result/MultiPMB_MbufferDPG_actor_test_s'+str(seed)+'_'+str(i)+'_oneArm.pt'
-model_file = '/home/px19783/Two_joint_arm/MBDPG_MemBuffer/Multi_target/Result/MultiPMB_MbufferDPG_model_test_s'+str(seed)+'_'+str(i)+'_oneArm.pt'
+hyper_tuning = search_hyperParam
+
+if not hyper_tuning:
+
+    accuracy_file = '/home/px19783/Two_joint_arm/MBDPG_MemBuffer/Multi_target/Result/MultiPMB_MbufferDPG_training_acc_test_s'+str(seed)+'_'+str(i)+'_oneArmOptim_2.pt'
+    actor_file = '/home/px19783/Two_joint_arm/MBDPG_MemBuffer/Multi_target/Result/MultiPMB_MbufferDPG_actor_test_s'+str(seed)+'_'+str(i)+'_oneArmOptim_2.pt'
+    model_file = '/home/px19783/Two_joint_arm/MBDPG_MemBuffer/Multi_target/Result/MultiPMB_MbufferDPG_model_test_s'+str(seed)+'_'+str(i)+'_oneArmOptim_2.pt'
+    episodes = 25001
+else:
+
+    accuracy_file = '/home/px19783/Two_joint_arm/MBDPG_MemBuffer/Multi_target/Hyperparam_tuning/Result/MultiPMB_MbufferDPG_training_acc_hyperTuning_s' + str(
+        seed) + '_' + str(i) + '_oneArm.pt'
+    episodes = 12001
 
 
-episodes = 15000
 n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
@@ -41,8 +56,8 @@ x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]  # initial condit
 t_step = tspan[-1] / n_RK_steps
 f_points = -time_window_steps -1 # use last point with no zero action # number of final points to average across for distance to target and velocity
 vel_weight = 0.05#0.2#0.4
-ln_rate_a = 0.0002525000018067658 #4.75000015e-05 #4.75000015e-05 #1.87500002e-04#working well: 0.00005
-model_lr = 0.0034000000450760126 #5.40000014e-03 #3.40000005e-03 # working well: 0.001
+ln_rate_a = actor_ln #4.75000015e-05 #4.75000015e-05 #1.87500002e-04#working well: 0.00005
+model_lr = model_ln #5.40000014e-03 #3.40000005e-03 # working well: 0.001
 std = 0.0124 #working well: 0.01
 max_u = 15000
 start_a_upd = 100#10#500 # 1000 performs much worse
@@ -52,7 +67,7 @@ n_target_p = 50
 overall_n_arms = n_target_p * n_arms # n. of parallel simulations (i.e. n. of amrms x n. of targets)
 std_decay = 0.999 # work worse: 0.99 and 1
 model_batch_s = 3000#200
-buffer_size = 15000#50000
+buffer_size = 15000 #25000 performs worse
 
 training_arm = FF_Parall_Arm_model(tspan, x0, dev, n_arms=overall_n_arms)
 est_arm = Multi_learnt_ArmModel(output_s = est_y_size, ln_rate= model_lr).to(dev)
@@ -135,7 +150,7 @@ for ep in range(1, episodes):
         est_y = est_arm(actions.view(overall_n_arms, a_size)) # re-estimate model prediction since model has been updated and gradient changed
 
         # compute gradient of rwd with respect to actions, using environment outcome
-        dr_da = torch.autograd.grad(outputs= est_y, inputs = actions, grad_outputs= dr_dy.squeeze(0))[0]
+        dr_da = torch.autograd.grad(outputs= est_y, inputs = actions, grad_outputs= dr_dy.squeeze())[0]
 
         agent.MB_update(actions,dr_da)
 
@@ -170,6 +185,12 @@ for ep in range(1, episodes):
         training_acc.append(print_acc)
         training_vel.append(print_vel)
 
-torch.save(training_acc,accuracy_file)
-torch.save(agent.state_dict(), actor_file)
-torch.save(est_arm.state_dict(), model_file)
+if not hyper_tuning:
+    torch.save(training_acc, accuracy_file)
+    torch.save(agent.state_dict(), actor_file)
+    torch.save(est_arm.state_dict(), model_file)
+
+else:
+    training_acc.append(actor_ln)
+    torch.save(training_acc, accuracy_file)
+
