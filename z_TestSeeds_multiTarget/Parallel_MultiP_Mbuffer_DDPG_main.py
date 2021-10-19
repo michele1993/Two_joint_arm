@@ -67,7 +67,7 @@ training_arm = FF_Parall_Arm_model(tspan, x0, dev, n_arms=overall_n_arms)
 # Use to randomly generate targets in front of the arm and on the max distance circumference
 
 
-#target_states = training_arm.circof_random_tagrget(n_target_p)
+target_states = training_arm.circof_random_tagrget(n_target_p)
 
 target_states = torch.load('/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_targetPoints_s1_2.pt')
 

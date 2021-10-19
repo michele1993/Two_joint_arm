@@ -1,25 +1,48 @@
 from TD_3.FeedForward.FF_parall_arm import FF_Parall_Arm_model
-from TD_3.FeedForward.FF_AC import *
+from MBDPG_MemBuffer.Linear_DynamicalSystem.SingleTarget.Linear_DS_agent import Linear_DS_agent
 import torch
 import numpy as np
 from MB_DPG.FeedForward.Learnt_arm_model import learnt_ArmModel
 from MBDPG_MemBuffer.Memory_Buffer import MemBuffer
+import argparse
 
-# Best params from search: model_lr = 8.3500e-03; ln_rate_a = 5.1250e-04; std = 0.0124
+# trial inputs: -s 0 -m 0.0034000000450760126 -a 0.0001 -i 1
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--seed',    '-s', type=int, nargs='?')
+# Default values represent best values from hyperparam search:
+parser.add_argument('--modelLr',    '-m', type=float, nargs='?',default= 5.2500e-03) #5.2500e-03
+parser.add_argument('--actorLr',   '-a', type=float, nargs='?', default= 1.0000e-04) #1.0000e-04
+parser.add_argument('--std',   '-d', type=float, nargs='?', default= 0.0124) # for max = 10000, best std=  0.0192
+parser.add_argument('--counter',   '-i', type=int, nargs='?')
+parser.add_argument('--hyperparam_search',   '-hs', type=bool, nargs='?', default=False)
 
 
-s_file = 74 # randomly generated test seeds : 35, 71, 33, 59, 61
-torch.manual_seed(s_file)
+args = parser.parse_args()
+seed = args.seed
+i = args.counter
+model_ln = args.modelLr
+actor_ln = args.actorLr
+search_hyperParam = args.hyperparam_search
+std = args.std
 
-acc_file = '/Users/michelegaribbo/PycharmProjects/Two_joint_arm/MBDPG_MemBuffer/Results/Mbuffer_MBDPG_trialAccuracy_s'+str(s_file)+'_uniform.pt'
-vel_file = '/Users/michelegaribbo/PycharmProjects/Two_joint_arm/MBDPG_MemBuffer/Results/Mbuffer_MBDPG_trialVelocity_s'+str(s_file)+'_uniform.pt'
-
-#torch.autograd.set_detect_anomaly(True)
-
-# dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+torch.manual_seed(seed)
 dev = torch.device('cpu')
 
-episodes = 5001
+if not search_hyperParam:
+
+    accuracy_file = '/home/px19783/Two_joint_arm/MBDPG_MemBuffer/Linear_DynamicalSystem/SingleTarget/Result/LDS_MBDPG_training_acc_test_s'+str(seed)+'_'+str(i)+'_oneArmOptim_2.pt'
+    actor_file = '/home/px19783/Two_joint_arm/MBDPG_MemBuffer/Linear_DynamicalSystem/SingleTarget/Result/LDS_MBDPG_actor_test_s'+str(seed)+'_'+str(i)+'_oneArmOptim.pt'
+    model_file = '/home/px19783/Two_joint_arm/MBDPG_MemBuffer/Linear_DynamicalSystem/SingleTarget/Result/LDS_MBDPG_model_test_s'+str(seed)+'_'+str(i)+'_oneArmOptim.pt'
+    episodes = 15001
+else:
+
+    accuracy_file = '/home/px19783/Two_joint_arm/MBDPG_MemBuffer/Linear_DynamicalSystem/SingleTarget/Hyperparam_tuning/Result/LDS_MBDPG_training_acc_hyperTuning_s' + str(
+        seed) + '_' + str(i) + '_oneArm_std.pt'
+    episodes = 10001
+
+print("a: ",actor_ln, "m: ",model_ln, "h ", search_hyperParam,"e ",episodes, "d ",std)
+
 n_RK_steps = 99
 time_window_steps = 0
 n_parametrised_steps = n_RK_steps - time_window_steps
@@ -30,20 +53,14 @@ x0 = [[-np.pi / 2], [np.pi / 2], [0], [0], [0], [0], [0], [0]]  # initial condit
 t_step = tspan[-1] / n_RK_steps
 f_points = -time_window_steps -1 # use last point with no zero action # number of final points to average across for distance to target and velocity
 vel_weight = 0.05
-
-model_lr = 0.0034 #8.3500e-03 #3.40000005e-03
-ln_rate_a = 0.0002525 #5.1250e-04 #1.87500002e-04
-
-
-std = 0.0124
-max_u = 15000
-start_a_upd = 100#500
+#std = 0.0124 * 3/2 #2/3 # since max control signal was reduced of 1/3
+max_u = 15000 #10000
+start_a_upd = 100
 a_size = n_parametrised_steps * 2
 est_y_size = 4 # attempt to predict only 4 necessary components to estimated the rwd (ie. 2 angles and 2 angle vels)
-#actor_update = 3
-std_decay = 0.99#0.999
-model_batch_s = 100#200
-buffer_size = 500#5000
+std_decay = 0.999 #0.99
+model_batch_s = 100
+buffer_size = 500
 
 # Target endpoint, based on matlab - reach straight in front, at shoulder height
 x_hat = 0.792
@@ -52,10 +69,10 @@ y_hat = 0
 target_state = torch.tensor([x_hat, y_hat]).view(1, 2).to(dev)  # .repeat(n_arms,1).to(dev)
 
 training_arm = FF_Parall_Arm_model(tspan, x0, dev, n_arms=n_arms)
-est_arm = learnt_ArmModel(output_s = est_y_size, ln_rate= model_lr)
+est_arm = learnt_ArmModel(output_s = est_y_size, ln_rate= model_ln)
 
 # Initialise actor and critic
-agent = Actor_NN(dev, Output_size=n_parametrised_steps * 2, ln_rate=ln_rate_a).to(dev)
+agent = Linear_DS_agent(t_step,n_parametrised_steps,actor_ln,dev).to(dev)
 agent.apply(agent.small_weight_init)
 
 M_buffer = MemBuffer(n_arms,a_size,est_y_size,dev,size=buffer_size)
@@ -69,19 +86,13 @@ ep_MLoss = []
 
 training_acc = []
 training_vel = []
-training_actions = []
 
 #torch.set_printoptions(threshold=10_000)
 
-n_aver_val = 5  # number of accuracy and velocity values averaged across for final value
-aver_counter = 0
-aver_acc = torch.zeros(n_aver_val)
-aver_vel = torch.zeros(n_aver_val)
 
 for ep in range(1, episodes):
 
-    det_actions = agent(target_state)  # may need converting to numpy since it's a tensor
-
+    det_actions,_ = agent(target_state)  # may need converting to numpy since it's a tensor
 
     exploration = (torch.randn((n_arms, 2, n_parametrised_steps)) * std).to(dev)
 
@@ -159,18 +170,8 @@ for ep in range(1, episodes):
         print("BEST: ", best_acc)
         print("training accuracy: ", print_acc)
         print("training velocity: ", print_vel)
-        print("Model loss: ", print_MLoss)
+        #print("Model loss: ", print_MLoss)
 
-        # Computer average accuracy and velocity of past 500 eps:
-        indx = aver_counter % n_aver_val
-        aver_acc[indx] = print_acc
-        aver_vel[indx] = print_vel
-        aver_counter += 1
-
-        print("\n Aver Acc: ",aver_acc)
-        print("Aver Vel: ", aver_vel, "\n")
-        # if print_acc < th_error:
-        #     break
 
         ep_rwd = []
         ep_vel = []
@@ -178,9 +179,12 @@ for ep in range(1, episodes):
         training_acc.append(print_acc)
         training_vel.append(print_vel)
 
-print(s_file)
+if not search_hyperParam:
+    torch.save(training_acc, accuracy_file)
+    #torch.save(agent.state_dict(), actor_file)
+    #torch.save(est_arm.state_dict(), model_file)
 
-# torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_actor_final_s35.pt')
-# torch.save(est_arm.state_dict(), '/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Results/MB_DPG_FF_model_final_s35.pt')
-# torch.save(training_acc,acc_file)
-# torch.save(training_vel,vel_file)
+else:
+    training_acc.append(model_ln)
+    training_acc.append(actor_ln)
+    torch.save(training_acc, accuracy_file)

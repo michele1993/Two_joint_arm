@@ -11,7 +11,7 @@ torch.manual_seed(38)  # FIX SEED
 
 #dev = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 dev = torch.device('cpu')
-episodes = 1000
+episodes = 10000
 n_RK_steps = 99
 time_window = 0
 n_parametrised_steps = n_RK_steps -time_window
@@ -24,7 +24,8 @@ ln_rate_a = 0.005
 velocity_weight = 0.005
 max_u = 15000 # 15000
 th_error = 0.01#0.025 # i.e. same accuracy as DPG at test
-
+n_targets = 50
+n_arms = 1
 
 # Target endpoint, based on matlab - reach straight in front, at shoulder height
 x_hat = 0.792
@@ -33,23 +34,14 @@ y_hat = 0
 target_state = torch.tensor([x_hat,y_hat]).view(1,2).to(dev)
 
 
-arm = Spvsd_Arm_model(tspan,x0,dev, n_arms=1)
+arm = Spvsd_Arm_model(tspan,x0,dev, n_arms=n_targets)
 
-test_LDS = True
+target_states = torch.load('/Users/michelegaribbo/PycharmProjects/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_targetPoints_s1_2.pt',map_location=torch.device('cpu'))
 
-# Initialise actor
-if test_LDS:
-
-    actor_ln = 0.001#0.0002525000018067658
-    agent = Linear_DS_agent(t_step,n_parametrised_steps,actor_ln,dev).to(dev)
-    agent.apply(agent.small_weight_init)
-    actor_file = '/Supervised_learning/Feed_Forward/LDS_analysis/Result/SPVSD_LDS_parameters_SingleTarget'
-
-
-else:
-    agent = Actor_NN(max_u,dev, Output_size=n_parametrised_steps * 2, ln_rate=ln_rate_a).to(dev)
-    agent.apply(agent.small_weight_init)
-
+actor_ln = 0.001
+agent = Linear_DS_agent(t_step,n_parametrised_steps,actor_ln,n_targets,dev).to(dev)
+agent.apply(agent.small_weight_init)
+actor_file = '/Supervised_learning/Feed_Forward/LDS_analysis/Result/SPVSD_LDS_parameters_1'
 
 
 ep_distance = []
@@ -61,24 +53,23 @@ training_velocity = []
 
 for ep in range(1,episodes):
 
-    if test_LDS:
-        actions = agent(target_state)[0].view(1,2,-1)
-        actions = actions * max_u
-    else:
-        actions = agent(target_state).view(1, 2, -1)
+
+    actions,_ = agent(target_states)
+    actions = actions * max_u
+
 
     thetas = arm.perform_reaching(t_step,actions)
 
     # NOT SURE GOOD IDEA, maybe better to optim sqrt (i.e. actual distance):
     # Compute squared distance for x and y coord, so that can optimise that and then apply sqrt() to obtain actual distance as a measure of performance
-    rwd = arm.compute_rwd(thetas, x_hat,y_hat, f_points)
+    rwd = arm.multiP_compute_rwd(thetas,target_states[:,0:1],target_states[:,1:2], f_points, n_arms)
     velocity = arm.compute_vel(thetas,f_points)
     loss = rwd + (velocity * velocity_weight)
 
     agent.update(loss)
 
-    ep_distance.append(torch.sqrt(rwd).detach()) # mean distance to assess performance
-    ep_velocity.append(torch.sqrt(velocity).detach())
+    ep_distance.append(torch.mean(torch.sqrt(rwd).detach())) # mean distance to assess performance
+    ep_velocity.append(torch.mean(torch.sqrt(velocity).detach()))
 
 
 
@@ -101,11 +92,6 @@ for ep in range(1,episodes):
         ep_velocity = []
 
 
-if test_LDS:
 
-    torch.save(agent.state_dict(),actor_file)
 
-#else:
-    # torch.save(agent.state_dict(), '/home/px19783/Two_joint_arm/Supervised_learning/Feed_Forward/Results/NN_Spvsd_FF_agent_s1_BestParams.py')
-    # torch.save(training_accuracy,'/home/px19783/Two_joint_arm/Supervised_learning/Feed_Forward/Results/NN_Spvsd_FF_training_accuracy_s1_BestParams.py')
-    # torch.save(training_velocity,'/home/px19783/Two_joint_arm/Supervised_learning/Feed_Forward/Results/NN_Spvsd_FF_training_velocity_s1_BestParams.py')
+torch.save(agent.state_dict(),actor_file)

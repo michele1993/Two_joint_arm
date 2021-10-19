@@ -76,6 +76,7 @@ for ep in range(1,episodes):
 
     weighted_adv = rwd + vel_weight * velocity
 
+
     agent.update(weighted_adv)
 
     ep_rwd.append(torch.mean(torch.sqrt(rwd)))
