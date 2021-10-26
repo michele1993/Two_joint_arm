@@ -35,4 +35,4 @@ np.save('/home/px19783/Two_joint_arm/Model_based/TestSeeds/Results/ModelBased_te
 np.save('/home/px19783/Two_joint_arm/Model_based/TestSeeds/Results/ModelBased_ModelEps_testSeeds_s' + str(
     seed) + "_" + str(i) + '.npy', value_model)
 np.save('/home/px19783/Two_joint_arm/Model_based/TestSeeds/Results/ModelBased_ActorEps_testSeeds_s' + str(
-    seed) + "_" + str(i) + '.npy', value_acc)
+    seed) + "_" + str(i) + '.npy', value_actor)

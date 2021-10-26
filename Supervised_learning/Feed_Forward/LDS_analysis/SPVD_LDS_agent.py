@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as opt
 
-class Linear_DS_agent(nn.Module):
+class Spvsd_Linear_DS_agent(nn.Module):
 
     def __init__(self, t_step,n_steps,ln_rate, n_targets ,dev,action_s=2,h_s = 10, input_s=2, h_nn_s = 256 ): # h_s = 25; h_nn_s = 116
 

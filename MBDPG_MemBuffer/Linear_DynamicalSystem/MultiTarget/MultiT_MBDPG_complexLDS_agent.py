@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as opt
 
-class Linear_DS_agent(nn.Module):
+class Complex_Linear_DS_agent(nn.Module):
 
     def __init__(self, t_step,n_steps,ln_rate_1,ln_rate_2, n_targets ,dev,action_s=2,h_s = 10, input_s=2, h_nn_s = 256 ): # h_s = 25; h_nn_s = 116
 
@@ -17,14 +17,8 @@ class Linear_DS_agent(nn.Module):
         self.dev = dev
 
         # Define the dynamical system
-        self.D = torch.randn(h_s).to(self.dev) * 0.1 # and * 1 for Multi Target# initialise a random diagonal matrix
-        self.P = torch.randn((h_s,h_s)).to(self.dev)
-
-        #self.D = nn.Parameter(self.D)
-        #self.P = nn.Parameter(self.P)
-
-        self.D.requires_grad = True
-        self.P.requires_grad = True
+        self.A = torch.randn((h_s,h_s)).to(self.dev) * 0.1
+        self.A.requires_grad = True
 
         # Define an NN that gives an initial condition based on the target
         self.l1 = nn.Linear(input_s,h_nn_s)
@@ -36,7 +30,7 @@ class Linear_DS_agent(nn.Module):
 
         #self.optimiser = opt.Adam(self.parameters(), ln_rate)
 
-        self.optimiser_1 = opt.Adam([self.D, self.P], ln_rate_1)
+        self.optimiser_1 = opt.Adam([self.A], ln_rate_1)
         self.optimiser_2 = opt.Adam(self.parameters(), ln_rate_2)
 
     def small_weight_init(self,l):
@@ -45,16 +39,12 @@ class Linear_DS_agent(nn.Module):
             nn.init.normal_(l.weight,mean=0,std= 0.00005)# std= 0.0005
             nn.init.normal_(l.bias,mean=0,std= 0.00005)# std= 0.0005
 
-    def compute_A(self):
 
-        return self.P @ torch.diag_embed(torch.exp(self.D)) @ torch.inverse(self.P)
 
     def forward(self, target):
 
         # compute the initial condition
         x = self.inital_cond(target).squeeze().T
-
-        A = self.compute_A()
 
         hidden_states = torch.zeros((self.n_steps,self.h_s,self.n_targets)).to(self.dev)
         actions = torch.zeros((self.n_targets, self.action_s, self.n_steps)).to(self.dev)
@@ -65,7 +55,7 @@ class Linear_DS_agent(nn.Module):
             hidden_states[s,:,:] = x.clone().squeeze()
             actions[:,:,s] = self.map_actions(x.T)
 
-            x = x -(A@x) * self.t_step
+            x = x -(self.A@x) * self.t_step
 
 
         return actions, hidden_states

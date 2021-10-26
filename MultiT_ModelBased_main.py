@@ -4,14 +4,24 @@ from Model_based.MultiTarget.MultiT_ModelBased_alg import MB_alg
 import torch
 import numpy as np
 
-dev = torch.device('cpu')
+import argparse
 
-seed_v = 528 # 528 # test seeds: [4, 418, 81, 528,] # 702
-torch.manual_seed(seed_v)
+# trial inputs: -s 0 -m 0.0034000000450760126 -a 0.0001 -i 1
 
-acc_file = '/home/px19783/Two_joint_arm/Model_based/MultiTarget/Result/MultiTModelBasedAccuracy_s'+str(seed_v)+'.pt'
-modelUp_file = '/home/px19783/Two_joint_arm/Model_based/MultiTarget/Result/MultiTModelBasedModUpdates_s'+str(seed_v)+'.pt'
-actorUp_file = '/home/px19783/Two_joint_arm/Model_based/MultiTarget/Result/MultiTModelBasedActUpdates_s'+str(seed_v)+'.pt'
+parser = argparse.ArgumentParser()
+parser.add_argument('--seed',    '-s', type=int, nargs='?')
+parser.add_argument('--counter',   '-i', type=int, nargs='?')
+
+
+args = parser.parse_args()
+seed_v = args.seed
+i = args.counter
+
+dev = torch.device("cpu")
+
+acc_file = '/home/px19783/Two_joint_arm/Model_based/MultiTarget/Result/MultiTModelBasedAccuracy_s'+str(seed_v)+"_"+str(i)+'.pt'
+modelUp_file = '/home/px19783/Two_joint_arm/Model_based/MultiTarget/Result/MultiTModelBasedModUpdates_s'+str(seed_v)+"_"+str(i)+'.pt'
+actorUp_file = '/home/px19783/Two_joint_arm/Model_based/MultiTarget/Result/MultiTModelBasedActUpdates_s'+str(seed_v)+"_"+str(i)+'.pt'
 #vel_file = '/Users/michelegaribbo/PycharmProjects/Two_joint_arm/Model_based/MultiTarget/Result/MultiTModelBasedVelocity_s'+str(seed_v)+'_uniform.pt'
 
 
@@ -45,7 +55,7 @@ agent.apply(agent.small_weight_init)
 
 MB_alg = MB_alg(estimated_arm,agent ,t_step, n_parametrised_steps,velocity_weight, th_error, n_arms)
 
-# CHANGEEEEEEE !!!! :
+
 #target_states = target_arm.circof_random_tagrget(n_target_p)
 target_states = torch.load('/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_targetPoints_s1_2.pt', map_location=torch.device('cpu'))
 
