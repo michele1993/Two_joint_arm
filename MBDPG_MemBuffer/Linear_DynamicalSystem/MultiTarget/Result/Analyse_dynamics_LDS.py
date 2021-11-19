@@ -4,6 +4,8 @@ from TD_3.FeedForward.FF_parall_arm import FF_Parall_Arm_model
 from MBDPG_MemBuffer.Linear_DynamicalSystem.MultiTarget.stopping_LDS_FF_parall_arm import Stopping_FF_Parall_Arm_model
 from MBDPG_MemBuffer.Linear_DynamicalSystem.MultiTarget.MultiT_MBDPG_LDS_agent import Linear_DS_agent
 from MBDPG_MemBuffer.Linear_DynamicalSystem.MultiTarget.MultiT_MBDPG_complexLDS_agent import Complex_Linear_DS_agent
+from Supervised_learning.Feed_Forward.LDS_analysis.SingleT_SPVD_LDS_agent import SingTSpvsd_Linear_DS_agent
+
 from Supervised_learning.Feed_Forward.LDS_analysis.SPVD_LDS_agent import Spvsd_Linear_DS_agent
 import matplotlib.pyplot as plt
 #from Supervised_learning.Feed_Forward.LDS_analysis.SPVD_LDS_agent import Linear_DS_agent
@@ -52,14 +54,24 @@ elif learning_type == "Real":
 elif learning_type == "Supervised":
 
     accuracy = None
+
+    # Uncomment for multiT:
     agent_NN = torch.load("/Users/michelegaribbo/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/LDS_analysis/Result/SPVSD_LDS_parameters_1")
     agent = Spvsd_Linear_DS_agent(t_step,n_parametrised_steps,0,n_targets,dev)
+
+    # Uncomment for singleT:
+    # agent_NN = torch.load("/Users/michelegaribbo/PycharmProjects/Two_joint_arm/Supervised_learning/Feed_Forward/LDS_analysis/Result/SPVSD_LDS_parameters_SingleTarget")
+    # agent = SingTSpvsd_Linear_DS_agent(t_step, n_parametrised_steps, 0, dev)
 
 
 agent.load_state_dict(agent_NN)
 
 
 target_states = torch.load('/Users/michelegaribbo/PycharmProjects/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_targetPoints_s1_2.pt',map_location=torch.device('cpu'))
+
+x_hat = 0.792
+y_hat = 0
+target_state = torch.tensor([x_hat,y_hat]).view(1,2).to(dev)
 
 #rand_indx = torch.randint(n_targets,(1,))
 rand_indx = 0
@@ -106,6 +118,8 @@ font = {'family' : 'normal',
         'size'   : 8}
 
 plt.rc('font', **font)
+
+
 plt.plot(time_rng,rand_target_actions.T)
 
 # Increase signal through a Gaussian matrix

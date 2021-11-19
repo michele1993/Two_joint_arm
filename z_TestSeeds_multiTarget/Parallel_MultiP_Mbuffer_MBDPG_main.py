@@ -80,8 +80,8 @@ M_buffer = MemBuffer(overall_n_arms,a_size,est_y_size,dev,size=buffer_size)
 
 
 # Use to randomly generate targets in front of the arm and on the max distance circumference
-#target_states = training_arm.circof_random_tagrget(n_target_p)
-target_states = torch.load('/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_targetPoints_s1_2.pt')
+target_states = training_arm.circof_random_tagrget(n_target_p)
+#target_states = torch.load('/home/px19783/Two_joint_arm/MB_DPG/FeedForward/Multi_target/Results/MultiPMB_DPG_FF_targetPoints_s1_2.pt')
 
 
 # Initialise some useful variables

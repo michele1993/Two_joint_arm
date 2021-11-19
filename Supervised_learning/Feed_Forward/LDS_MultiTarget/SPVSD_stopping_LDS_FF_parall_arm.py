@@ -197,6 +197,7 @@ class Spvsd_Arm_model:
         x_hat = x_hat.repeat(1,target_n_arms,1)
         y_hat = y_hat.repeat(1,target_n_arms,1)
 
+
         return (x_hat - x_c)**2 + (y_hat - y_c)**2
 
     def compute_accel(self, vel, t_step):
