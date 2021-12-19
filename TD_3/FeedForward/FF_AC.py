@@ -105,6 +105,7 @@ class Critic_NN(nn.Module):
 
         x = F.relu(self.l1(torch.cat([s, a], dim=1)))
 
+
         #x = F.relu(self.l2(x))
 
         x = self.l3(x)
